@@ -234,3 +234,87 @@ For $6,000 prize upside, defensible if both builders have bandwidth. Real scope 
 The orbital corroboration also strengthens the Future Society and ENS pitches. The vessel ENS dossier now contains two artifacts: the citizen photo and the orbital confirmation, both signed, both immutable. This is the strongest possible second signal for AIS-dark vessels — ground-truth that the ship was where the citizen said it was, signed by space.
 
 Solar-punk. End-to-end signed. Citizen-led, orbit-confirmed.
+
+---
+
+# UMA + Swarm as a general-purpose primitive
+
+## The insight
+
+Phare is not just a vessel-tracking app. The core of what we're building is a **bonded photo claim primitive**:
+
+> Signed photo on Swarm + signed metadata on Swarm + UMA assertion + Verified Fetch + dispute via counter-bond
+
+This pattern is domain-agnostic. The same primitive works for illegal logging, oil spills, environmental violations, citizen evidence chain-of-custody, missing-persons sightings, NGO incident reports — anything where a phone-captured photo with cryptographic provenance becomes an arbitratable record.
+
+The Swarm team confirmed interest in framing this as a reusable module rather than a vessel-specific integration.
+
+## How UMA + Swarm connect
+
+Photos never touch UMA. The actual layout:
+
+| Layer | What's stored |
+|---|---|
+| UMA contract | Claim string `"Report at bzz://<meta> is true"` + assertionId (~100 bytes) |
+| `ancillaryData` (on-chain, in UMA) | Viewable gateway URL for voters (~1 KB) |
+| Swarm | Metadata JSON `{ photo: bzz://X, gps, imo, ... }` (~1 KB) |
+| Swarm | The actual JPEG (~500 KB) |
+
+UMA voters read the claim, follow the Swarm gateway link, inspect the photo and disputer evidence, vote. Swarm is the only storage layer that makes this trustless — content-addressed (so voters verify what was asserted) and gateway-tamper-resistant (Verified Fetch recomputes the hash).
+
+## What is general-purpose vs. vessel-specific
+
+**Generic core (`core/`)** — ships as a reusable module:
+- `BondedPhotoClaim.sol` — abstract contract: WebAuthn verify + UMA wiring + bond + slash
+- Sentinel skill base class with pluggable fakeness check interface
+- Verified Fetch helper (content-addressed fetch + SHA-256 recomputation)
+- Web SDK primitives: camera + GPS + WebAuthn + Swarm upload
+
+**Vessel-specific (`vessel-app/`)** — imports the core:
+- `ReportRegistry.sol` — extends `BondedPhotoClaim` with IMO field + maritime hooks
+- OpenSanctions lookup
+- NameStone vessel subname minting + dossier assembly
+- Maritime sentinel fakeness checks (ocean bounding box, perceptual hash bloom filter)
+- SpaceComputer orbital corroboration
+
+## Recommended folder structure
+
+```
+phare-protocol/
+  core/
+    contracts/
+      BondedPhotoClaim.sol    # abstract: WebAuthn + UMA + bond + slash
+    skill-base/               # base sentinel skill, pluggable fakeness checks
+    swarm/                    # Verified Fetch helpers
+    web-sdk/                  # camera + GPS + WebAuthn + Swarm upload primitives
+
+  vessel-app/
+    contracts/
+      ReportRegistry.sol      # extends BondedPhotoClaim — IMO + maritime hooks
+    web/                      # vessel-specific UI on top of web-sdk
+    minter/                   # OpenSanctions + NameStone (vessel-specific)
+    skill/                    # maritime fakeness checks
+    orbital/                  # SpaceComputer corroboration (vessel-specific)
+```
+
+The abstraction is visible in folder layout. No extra application code needed — judges and the Swarm team see "this is a primitive, vessels are one application."
+
+## Important practical notes
+
+**Swarm stamps must outlive the dispute window.** If stamps expire during the 48–96h DVM resolution, voters cannot see the photo. For production, minimum ~5 days of stamp coverage. For demo (30s liveness, no real dispute), irrelevant.
+
+**Voters need a working HTTPS gateway link.** Embed `https://gateway.ethswarm.org/bzz/<hash>` in ancillary data — not raw `bzz://` URIs. Most voters won't run a Bee node.
+
+**UMA's liveness window vs. DVM resolution are different things.** Unchallenged assertions settle in the liveness window (30s demo / 6h+ production). Disputed assertions trigger the UMA DVM commit-reveal vote which takes 48–96 hours — no way to speed this up. For the adversarial demo, use a `mockResolve(assertionId, bool)` owner-gated function on `ReportRegistry` that simulates the UMA callback. Label clearly as demo-only.
+
+**UMA's own bond burn affects the slash split.** UMA burns ~50% of the loser's bond internally. The README's 50/30/20 split does not match UMA's actual bond mechanics. Recommended fix: use UMA with a minimum bond (anti-spam only), hold the real $5 bond in `ReportRegistry` directly, apply Phare's split there. UMA is the truth oracle; `ReportRegistry` is the economic layer.
+
+## Why this strengthens the Swarm pitch
+
+The Swarm hook goes from "we use Verified Fetch" ($250 free pickup) to:
+
+> *"We built a Swarm-native primitive for bonded photo claims. Swarm is the only storage layer that makes this work — content-addressed for voter verification, gateway-tamper-resistant via Verified Fetch, persistent across the full dispute window via postage stamps. Vessels are our first application; the primitive is general."*
+
+## Scope discipline
+
+Do not double the implementation work to "prove" the abstraction. The generalisation lives in the folder structure and `BondedPhotoClaim.sol` being abstract. One working vessel application is sufficient. Pitch as "designed to generalise" — do not claim a framework you did not ship.
