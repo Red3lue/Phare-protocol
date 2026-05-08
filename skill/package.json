@@ -1,0 +1,6 @@
+{
+  "name": "skill",
+  "version": "0.0.0",
+  "private": true,
+  "description": "phare/verifier — OpenClaw skill (NICK_SPEC, DESIGN_DOCUMENT §4.4)"
+}

@@ -1,0 +1,9 @@
+packages:
+  - "web"
+  - "skill"
+  - "suggester"
+  - "minter"
+  - "orbital"
+  - "orbital-plugin"
+  - "swarm"
+  - "contracts"

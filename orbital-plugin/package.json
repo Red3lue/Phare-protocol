@@ -1,0 +1,6 @@
+{
+  "name": "orbital-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "phare-imager — Orbitport Application Plugin (JSON-RPC 2.0) (DESIGN_DOCUMENT §7.1)"
+}

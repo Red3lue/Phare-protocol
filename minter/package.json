@@ -1,0 +1,6 @@
+{
+  "name": "minter",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Settled-event listener → OpenSanctions → Lighthouse vessel records (DESIGN_DOCUMENT §4.6)"
+}
