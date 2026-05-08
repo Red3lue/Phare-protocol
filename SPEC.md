@@ -47,7 +47,7 @@ Skip if you're already fluent. Each term is used freely from §3 onward.
 - **ENS** *(Ethereum Name Service)* — a system for human-readable names on Ethereum, like DNS but on-chain. Names like `nick.eth`. Names can have **subnames** (e.g. `agent.nick.eth`) and **text records** (key-value metadata attached to a name).
 - **Optimistic oracle** — a contract that accepts truth-claims, defaults to accepting them as true after a short window, but allows anyone to challenge a claim by posting a counter-bond. If the challenge succeeds, the original claimant loses their bond.
 - **UMA OOv3** — a specific implementation of an optimistic oracle, deployed on multiple chains. The one we use.
-- **Liveness window** — the time during which a claim can be challenged before it auto-settles as true. We use 30 seconds for demo, 6+ hours in production.
+- **Liveness window** — the time during which a claim can be challenged before it auto-settles as true. We use 1 minute for demo, 6+ hours in production.
 
 ### Hardware
 
@@ -122,7 +122,7 @@ side services (off-chain, run by project team):
 3. Reporter takes a photo. The website asks the device for a WebAuthn signature over `(photo_hash, gps, timestamp, imo, ais_dark_flag, nonce)`.
 4. The website uploads the photo and metadata JSON to Swarm.
 5. The reporter's wallet calls `ReportRegistry.submit()` on Base Sepolia, escrowing a $5 USDC bond. The contract verifies the WebAuthn signature on-chain and opens an assertion on UMA OOv3.
-6. The 30-second liveness window starts. **Anyone** with a counter-bond can dispute — sentinel agents race for it but humans can dispute too, the protocol doesn't care which.
+6. The 1-minute liveness window starts. **Anyone** with a counter-bond can dispute — sentinel agents race for it but humans can dispute too, the protocol doesn't care which.
 7. If unchallenged, the report settles. The reporter's bond is returned plus a small reward from the slash pool.
 8. The **ENS minter** picks up the settled event. If the IMO is in the OpenSanctions `maritime` scope, the minter calls NameStone to mint `imo-<n>.vessel.phare.eth` and writes the sighting into the vessel's text records.
 9. If the assertion was disputed and the dispute resolves against the reporter, the bond is slashed: 50% to the disputer, 30% to the slash pool, 20% to treasury.
@@ -142,14 +142,14 @@ Alice is on holiday on the Cypriot coast. She spots a tanker offshore that doesn
 7. The browser uploads the photo (~500 KB JPEG) and the metadata JSON to Swarm. Two `bzz://` references come back.
 8. Alice's wallet — an EOA she funded earlier from a faucet — signs `ReportRegistry.submit(metaRef, webAuthnAssertion, bond=5_USDC)`.
 9. The contract verifies the WebAuthn signature against Alice's stored passkey public key (using Daimo's `p256-verifier`), pulls $5 USDC into escrow, and calls UMA OOv3 with the assertion `"Report at bzz://<meta> is true"`.
-10. The 30-second liveness window starts.
+10. The 1-minute liveness window starts.
 
 Meanwhile, sentinel agents `alpha`, `beta`, `gamma` each polling on a 5-second heartbeat see the new event:
 
 - `alpha` checks the IMO format → valid. Coordinates inside an ocean bounding box → valid. Photo perceptual hash not in the stolen-photo bloom filter → valid. WebAuthn signature already verified on-chain. **No grounds to dispute. Skips.**
 - `beta` and `gamma` reach the same conclusion.
 
-30 seconds pass. UMA OOv3 settles the assertion as true. `ReportRegistry.onUmaSettlement` fires:
+1 minute passes. UMA OOv3 settles the assertion as true. `ReportRegistry.onUmaSettlement` fires:
 
 - Alice's $5 bond returns to her wallet
 - A $0.10 reward from the slash pool also lands in her wallet
@@ -235,7 +235,7 @@ Vessel dossiers (an aggregated JSON with full sighting history) are stored on Sw
 
 ### Validation (UMA OOv3)
 
-Every report opens an assertion: `"Report at bzz://<meta> is true"`. Bond: $5 USDC. Liveness: 30 seconds (demo) / 6+ hours (production). Anyone with a matching counter-bond can dispute.
+Every report opens an assertion: `"Report at bzz://<meta> is true"`. Bond: $5 USDC. Liveness: 1 minute (demo) / 6+ hours (production). Anyone with a matching counter-bond can dispute.
 
 Bond economics on settlement:
 
@@ -283,9 +283,9 @@ Two builders, hackathon weekend, ≈55–65 hours of work.
 ## 8. Demo plan (3 minutes)
 
 1. **Hook** — one sentence on shadow fleet and ecological cost.
-2. **Live happy-path submission** — Mac browser, demo-mode location set to "off Cyprus". Suggester returns empty list. Reporter ticks AIS-dark, types a real OpenSanctions-listed IMO (e.g. PABLO, IMO 9133701), picks an OSINT photo. Touch ID. Swarm upload. Submit. 30 s liveness ticking visibly.
+2. **Live happy-path submission** — Mac browser, demo-mode location set to "off Cyprus". Suggester returns empty list. Reporter ticks AIS-dark, types a real OpenSanctions-listed IMO (e.g. PABLO, IMO 9133701), picks an OSINT photo. Touch ID. Swarm upload. Submit. 1 min liveness ticking visibly.
 3. **Adversarial submission** — second tab, deliberately stolen Google-Images tanker photo. Three sentinels (`alpha`, `beta`, `gamma`) race in mempool. Show fastest mining the dispute. Winner's `agent.stats.won` increments live via NameStone.
-4. **Settlement of legit report** — 30 s expires uncontested. Bond returns to reporter with reward. Minter mints `imo-9133701.vessel.phare.eth`. Resolve in browser. Show records: shadow flag, sanction reason, AIS-dark flag, `contenthash` → Swarm dossier with the photo.
+4. **Settlement of legit report** — 1 min expires uncontested. Bond returns to reporter with reward. Minter mints `imo-9133701.vessel.phare.eth`. Resolve in browser. Show records: shadow flag, sanction reason, AIS-dark flag, `contenthash` → Swarm dossier with the photo.
 5. **Close** — three artifacts on screen: vessel ENS subname, sentinel ENS subname, Swarm dossier. *"One PWA, one ClawHub skill, a global sentinel network."*
 
 ---
