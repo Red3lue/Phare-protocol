@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phare — System Diagrams</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js"></script>
+<style>
+  :root {
+    --cream: #faf6ec;
+    --leaf: #2d6a4f;
+    --leaf-light: #95d5b2;
+    --terracotta: #b5651d;
+    --sun: #f4a261;
+    --ink: #1b1b1b;
+    --muted: #555;
+    --rule: #d9cfb7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  header {
+    background: var(--leaf);
+    color: var(--cream);
+    padding: 36px 48px;
+    border-bottom: 4px solid var(--sun);
+  }
+  header h1 { margin: 0; font-size: 36px; letter-spacing: -0.02em; }
+  header p { margin: 8px 0 0; opacity: 0.85; max-width: 800px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 32px 48px 80px; }
+  section {
+    margin: 56px 0;
+    padding: 28px 32px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  section h2 {
+    margin: 0 0 8px;
+    color: var(--leaf);
+    font-size: 24px;
+    letter-spacing: -0.01em;
+  }
+  section p.lead {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .mermaid {
+    position: relative;
+    width: 100%;
+    height: 600px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 0 0 8px;
+  }
+  .mermaid svg {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    display: block;
+    cursor: grab;
+  }
+  .mermaid svg:active { cursor: grabbing; }
+  .reset-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--cream);
+    color: var(--leaf);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .reset-btn:hover { background: var(--leaf-light); }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 16px 0 24px;
+    font-size: 13px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--cream);
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+  }
+  .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    background: var(--cream);
+    color: var(--leaf);
+    font-weight: 600;
+  }
+  code {
+    background: var(--cream);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 32px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Phare — System Diagrams</h1>
+  <p>Open, bonded registry of citizen sightings of sanctioned tankers. Every connection between sponsors, the runtime data flow, and where each piece of information lives.</p>
+  <p style="margin-top:14px; font-size:13px; opacity:0.75;">Each diagram supports <strong>scroll to zoom</strong>, <strong>drag to pan</strong>, and a <strong>Reset</strong> button to fit-to-view.</p>
+</header>
+
+<main>
+
+<section>
+  <h2>1. System architecture</h2>
+  <p class="lead">All components and the channels between them. Sponsor-affiliated components are coloured by sponsor.</p>
+  <div class="legend">
+    <span><span class="swatch" style="background:#f4a261"></span>ETHPrague tracks</span>
+    <span><span class="swatch" style="background:#95d5b2"></span>ENS</span>
+    <span><span class="swatch" style="background:#90caf9"></span>Swarm</span>
+    <span><span class="swatch" style="background:#ce93d8"></span>SpaceComputer</span>
+    <span><span class="swatch" style="background:#ffcc80"></span>Sourcify (free pickup)</span>
+    <span><span class="swatch" style="background:#e0e0e0"></span>Other deps</span>
+  </div>
+  <div class="mermaid">
+flowchart TB
+    classDef eth fill:#f4a261,stroke:#b5651d,color:#1b1b1b
+    classDef ens fill:#95d5b2,stroke:#2d6a4f,color:#1b1b1b
+    classDef swarm fill:#90caf9,stroke:#1565c0,color:#1b1b1b
+    classDef space fill:#ce93d8,stroke:#6a1b9a,color:#1b1b1b
+    classDef sourcify fill:#ffcc80,stroke:#e65100,color:#1b1b1b
+    classDef other fill:#e0e0e0,stroke:#666,color:#1b1b1b
+
+    subgraph Reporter["Reporter side"]
+        WebApp["Reporter PWA<br/>camera · GPS · viem"]:::eth
+        Wallet["Anonymous EOA wallet"]:::eth
+    end
+
+    subgraph Verifiers["Verifier network"]
+        V1["alpha.verifier.phare.eth"]:::ens
+        V2["beta.verifier.phare.eth"]:::ens
+        V3["gamma.verifier.phare.eth"]:::ens
+    end
+
+    subgraph Storage["Decentralised storage"]
+        SwarmStore[("Swarm<br/>photos · metadata · dossiers · logs")]:::swarm
+    end
+
+    subgraph Chain["Base Sepolia"]
+        Reg["ReportRegistry<br/>submit · attest · settle"]:::eth
+        Pool["SlashPool"]:::eth
+        UMA["UMA OOv3"]:::other
+        Verify["Sourcify<br/>contract verification"]:::sourcify
+    end
+
+    subgraph Off["Project off-chain services"]
+        Sug["suggester/<br/>AIS → vessels-near"]:::other
+        Min["minter/<br/>OpenSanctions → NameStone"]:::ens
+        Orb["orbital/<br/>Settled → imagery → attest"]:::space
+    end
+
+    subgraph SpaceCo["SpaceComputer"]
+        OP["phare-imager plugin<br/>(Orbitport application layer)"]:::space
+        KMS["KMS<br/>EIP-191 ETHEREUM key"]:::space
+        TRNG["cTRNG<br/>cosmic randomness"]:::space
+    end
+
+    subgraph ExtAPI["External APIs"]
+        AIS["AISStream WebSocket"]:::other
+        OS["OpenSanctions API"]:::other
+        NS["NameStone CCIP-Read"]:::ens
+    end
+
+    subgraph ENS["ENS resolution"]
+        Vns["imo-N.vessel.phare.eth"]:::ens
+        Vrns["handle.verifier.phare.eth"]:::ens
+    end
+
+    WebApp -- "GPS query" --> Sug
+    Sug -- "subscribe" --> AIS
+    WebApp -- "upload photo + meta" --> SwarmStore
+    Wallet -- "sign tx" --> WebApp
+    WebApp -- "submit metaRef + 5 USDC" --> Reg
+    Reg -- "open assertion" --> UMA
+    Reg -- "escrow bond" --> Pool
+
+    V1 -- "poll Submitted" --> Reg
+    V2 -- "poll Submitted" --> Reg
+    V3 -- "poll Submitted" --> Reg
+    V1 -- "fetch metadata" --> SwarmStore
+    V1 -- "dispute + 5 USDC" --> UMA
+
+    UMA -- "Settled / Slashed" --> Reg
+    Reg -- "payout" --> Pool
+
+    Min -- "listen Settled" --> Reg
+    Min -- "sanctions check" --> OS
+    Min -- "build dossier" --> SwarmStore
+    Min -- "mint subname + records" --> NS
+    NS --> Vns
+    NS --> Vrns
+
+    Orb -- "listen Settled" --> Reg
+    Orb -- "requestImagery" --> OP
+    OP -- "image + meta (mocked)" --> Orb
+    Orb -- "requestInference" --> OP
+    OP -- "TEE destination (mocked)" --> Orb
+    Orb -- "sign image hash" --> KMS
+    Orb -- "pin image + TEE JSON" --> SwarmStore
+    Orb -- "attest(reportId, sig)" --> Reg
+    WebApp -. "nonce" .-> TRNG
+
+    Reg -. "verified deployment" .- Verify
+  </div>
+</section>
+
+<section>
+  <h2>2. Happy path — Alice submits a real sighting</h2>
+  <p class="lead">End-to-end sequence for an uncontested report. 30-second liveness, then mint.</p>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Alice
+    participant Web as Reporter PWA
+    participant Sug as Suggester
+    participant Sw as Swarm
+    participant Reg as ReportRegistry
+    participant UMA as UMA OOv3
+    participant Ver as Verifiers
+    participant Min as Minter
+    participant OS as OpenSanctions
+    participant NS as NameStone
+    participant ENS as imo-9133701.<br/>vessel.phare.eth
+
+    Alice->>Web: open phare.eth, allow camera + GPS
+    Web->>Sug: GET /vessels-near?lat=34.7&lon=33.0
+    Sug-->>Web: [] (AIS-dark)
+    Alice->>Web: photo + IMO 9133701 + ais_dark=true
+    Web->>Sw: upload photo + metadata.json
+    Sw-->>Web: bzz://photo, bzz://meta
+    Web->>Reg: submit(metaRef, 5 USDC bond)
+    Reg->>UMA: assertTruth("Report bzz://meta is true")
+    Note over UMA: 30 s liveness
+    Ver->>Reg: getLogs(Submitted)
+    Ver->>Sw: fetch metadata
+    Note over Ver: ocean bbox · IMO format ·<br/>perceptual hash bloom — all pass
+    UMA-->>Reg: settled (uncontested)
+    Reg-->>Alice: bond returned + 0.10 USDC reward
+    Min->>Reg: listen Settled
+    Min->>OS: lookup IMO 9133701
+    OS-->>Min: sanctioned · oil-transport
+    Min->>Sw: build dossier JSON
+    Min->>NS: mint imo-9133701.vessel.phare.eth<br/>+ text records + contenthash
+    NS-->>ENS: resolvable
+  </div>
+</section>
+
+<section>
+  <h2>3. Adversarial path — verifier races to dispute</h2>
+  <p class="lead">Stolen-photo report; first verifier to mine wins the dispute slot.</p>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Mallory
+    participant Web as Reporter PWA
+    participant Sw as Swarm
+    participant Reg as ReportRegistry
+    participant UMA as UMA OOv3
+    participant Alpha as alpha verifier
+    participant Beta as beta verifier
+    participant Pool as SlashPool
+
+    Mallory->>Web: submit Google-Images photo
+    Web->>Sw: upload stolen photo + meta
+    Web->>Reg: submit(metaRef, 5 USDC bond)
+    Reg->>UMA: assertTruth(...)
+    Alpha->>Reg: getLogs Submitted
+    Beta->>Reg: getLogs Submitted
+    Alpha->>Sw: fetch metadata
+    Beta->>Sw: fetch metadata
+    Note over Alpha,Beta: bloom-filter hit on shipspotting photo 847291
+    Alpha->>UMA: dispute + 5 USDC counter-bond
+    Note over Alpha,Beta: alpha wins race, beta sees slot taken
+    UMA-->>UMA: voters resolve
+    UMA-->>Reg: dispute resolved against reporter
+    Reg-->>Alpha: 2.50 USDC (50 percent of slashed bond)
+    Reg-->>Pool: 1.50 USDC (30 percent)
+    Reg-->>Reg: 1.00 USDC treasury (20 percent)
+    Note over Alpha: verifier.stats.won incremented via NameStone
+  </div>
+</section>
+
+<section>
+  <h2>4. Orbital corroboration — sequence with mock layers</h2>
+  <p class="lead">After a report settles, the orbital orchestrator drives the <code>phare-imager</code> plugin through three stages: imagery request, spaceTEE inference, and on-chain attestation. The satellite tasking and the spaceTEE are mocked for the hackathon; KMS signing and the on-chain attest are real.</p>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Reg as ReportRegistry
+    participant Orch as orbital orchestrator
+    participant Plug as phare-imager plugin
+    participant Sat as Mock satellite tasking
+    participant TEE as Mock spaceTEE
+    participant Sw as Swarm
+    participant KMS as SpaceComputer KMS
+    participant Min as Minter
+    participant ENS as vessel ENS subname
+
+    Reg-->>Orch: Settled(reportId, imo, lat, lon)
+    Orch->>Plug: phare.requestImagery(imo, lat, lon, reportId)
+    Plug->>Sat: tasking request
+    Note over Sat: hackathon: fixture lookup by lat/lon<br>real: orbital tasking via Orbitport
+    Sat-->>Plug: image bytes + capture metadata
+    Plug-->>Orch: phare.imageReady(image, meta)
+    Orch->>Sw: pin photo + capture metadata
+    Sw-->>Orch: bzz://image, bzz://meta
+    Orch->>Plug: phare.requestInference(imageRef, verifierLogRefs)
+    Plug->>TEE: inference task
+    Note over TEE: hackathon: rule-based stub<br>real: spaceTEE (planned)
+    TEE-->>Plug: destination + confidence
+    Plug-->>Orch: phare.inferenceReady(prediction)
+    Orch->>Sw: pin TEE JSON (mocked: true)
+    Sw-->>Orch: bzz://prediction
+    Orch->>KMS: sign keccak256(reportId, imo, gps, t, imageHash)
+    KMS-->>Orch: EIP-191 signature
+    Orch->>Reg: attest(reportId, t, lat, lon, imageHash, sig)
+    Reg->>Reg: ECDSA.recover == orbitalAttestor
+    Reg-->>Min: OrbitallyCorroborated event
+    Min->>Sw: update vessel sighting log
+    Min->>ENS: write vessel.orbital.* records
+  </div>
+</section>
+
+<section>
+  <h2>5. SpaceComputer integration — build vs mock vs ships</h2>
+  <p class="lead">Honest split of what Phare contributes, what we mock for the hackathon, and what SpaceComputer infrastructure already exists. The <code>mocked: true</code> flag is propagated all the way into the Swarm-pinned inference JSON so consumers can filter.</p>
+  <div class="mermaid">
+flowchart TB
+    classDef build fill:#95d5b2,stroke:#2d6a4f,color:#1b1b1b
+    classDef mock fill:#ffe0b2,stroke:#e65100,color:#1b1b1b
+    classDef exists fill:#e0e0e0,stroke:#666,color:#1b1b1b
+    classDef output fill:#90caf9,stroke:#1565c0,color:#1b1b1b
+
+    subgraph Build["BUILD — Phare contributes"]
+        Plugin["phare-imager<br>Orbitport External Plugin<br>JSON-RPC 2.0"]:::build
+        Orch["orbital/ orchestrator<br>Settled to attest pipeline"]:::build
+        Att["ReportRegistry.attest()<br>EIP-191 verify on-chain"]:::build
+        ENSRec["vessel.orbital.* ENS records"]:::build
+    end
+
+    subgraph MockSub["MOCK — hackathon shortcuts"]
+        MockSat["Mock satellite tasking<br>fixture lookup by lat/lon"]:::mock
+        MockSrc["Mock image source<br>Sentinel-2 + public maritime"]:::mock
+        MockTEE["Mock spaceTEE inference<br>rule-based destination stub"]:::mock
+    end
+
+    subgraph SpaceCo["SHIPS — SpaceComputer infrastructure"]
+        AppLayer["Orbitport Application Layer<br>REST + JSON-RPC gateway"]:::exists
+        KMS["KMS ETHEREUM key<br>EIP-191 signing"]:::exists
+        cTRNG["cTRNG<br>cosmic randomness"]:::exists
+    end
+
+    subgraph Outputs["OUTPUTS"]
+        Sw["Swarm<br>bzz://image · bzz://prediction"]:::output
+        Chain["Base Sepolia<br>attested imageHash"]:::output
+        ENSOut["ENS records<br>vessel.orbital.*"]:::output
+    end
+
+    Reporter["Reporter PWA"]:::output
+
+    Orch --> Plugin
+    Plugin --> AppLayer
+    Plugin -- routes to --> MockSat
+    MockSat -- pulls from --> MockSrc
+    Plugin -- routes to --> MockTEE
+    Orch --> KMS
+    KMS -- EIP-191 sig --> Orch
+    Orch --> Sw
+    Orch --> Att
+    Att --> Chain
+    Att --> ENSOut
+    Sw --> ENSOut
+    Reporter -- nonce --> cTRNG
+  </div>
+  <p class="lead" style="margin-top:18px"><strong>Real artefacts:</strong> the <code>phare-imager</code> plugin is published to the Orbitport ecosystem regardless of whether the imaging hardware is mocked — it defines the JSON-RPC contract for vessel imagery + TEE inference that SpaceComputer can wire up to live celestial-layer plugins later. KMS signing is real. cTRNG nonces in the reporter PWA are real.</p>
+</section>
+
+<section>
+  <h2>6. Web3 contracts required</h2>
+
+<section>
+  <h2>5. Web3 contracts required</h2>
+  <p class="lead">Two contracts to ship (Foundry, Solidity, Base Sepolia). Two external pre-deployed contracts to integrate. Every USDC movement shown explicitly.</p>
+  <div class="mermaid">
+flowchart TB
+    classDef own fill:#f4a261,stroke:#b5651d,color:#1b1b1b
+    classDef ext fill:#e0e0e0,stroke:#666,color:#1b1b1b
+    classDef actor fill:#95d5b2,stroke:#2d6a4f,color:#1b1b1b
+
+    subgraph Own["Phare contracts (Foundry · Base Sepolia)"]
+        RR["ReportRegistry<br/>submit · attest · onSettle · distribute"]:::own
+        SP["SlashPool<br/>seed funds + slashed shares"]:::own
+    end
+
+    subgraph Ext["External pre-deployed"]
+        USDC["USDC ERC-20<br/>(Base Sepolia)"]:::ext
+        UMA["UMA OOv3<br/>OptimisticOracleV3"]:::ext
+    end
+
+    subgraph Actors["EOAs"]
+        RA["Reporter wallet"]:::actor
+        VA["Verifier wallet"]:::actor
+        OA["Orbital attestor<br/>(SpaceComputer KMS)"]:::actor
+    end
+
+    RA -- "approve(5 USDC)" --> USDC
+    RA -- "submit(metaRef)" --> RR
+    RR -- "transferFrom(reporter, this, 5)" --> USDC
+    RR -- "assertTruth(claim, bond)" --> UMA
+
+    VA -- "approve(5 USDC)" --> USDC
+    VA -- "disputeAssertion(id)" --> UMA
+    UMA -- "transferFrom(verifier, this, 5)" --> USDC
+
+    UMA -- "assertionResolvedCallback" --> RR
+
+    RR -- "honest: transfer(reporter, bond + 0.10)" --> USDC
+    SP -- "fund 0.10 reward" --> RR
+
+    RR -- "slashed: transfer(verifier, 50 percent)" --> USDC
+    RR -- "slashed: transfer(slashpool, 30 percent)" --> USDC
+    RR -- "slashed: transfer(treasury, 20 percent)" --> USDC
+
+    OA -- "attest(reportId, sig)" --> RR
+  </div>
+  <p class="lead" style="margin-top:18px"><strong>Own:</strong> <code>ReportRegistry.sol</code>, <code>SlashPool.sol</code>. Both immutable, no proxies, no governance. Deployed and verified on Sourcify.<br/><strong>External:</strong> USDC (Base Sepolia faucet), UMA OOv3 (pre-deployed by UMA). Addresses fetched at sponsor desk on day 0.</p>
+</section>
+
+<section>
+  <h2>7. Contract responsibilities</h2>
+  <p class="lead">State, methods, and access control for each Phare contract, plus the external interfaces they call into.</p>
+  <div class="mermaid">
+classDiagram
+    direction LR
+
+    class ReportRegistry {
+        +USDC : IERC20
+        +UMA : OptimisticOracleV3
+        +slashPool : SlashPool
+        +treasury : address
+        +orbitalAttestor : address
+        +BOND : uint256
+        +LIVENESS : uint64
+        +reports : mapping
+        +assertionToReport : mapping
+        +submit(metaRef, imo) bytes32
+        +attest(reportId, t, lat, lon, hash, sig)
+        +assertionResolvedCallback(id, truth)
+        +assertionDisputedCallback(id)
+    }
+
+    class SlashPool {
+        +USDC : IERC20
+        +registry : address
+        +treasury : address
+        +rewardAmount : uint256
+        +seed(amount)
+        +payReward(reporter)
+        +receiveSlashShare(amount)
+        +sweep(amount)
+    }
+
+    class IERC20_USDC {
+        +transferFrom(from, to, amount)
+        +transfer(to, amount)
+        +approve(spender, amount)
+        +balanceOf(addr) uint256
+    }
+
+    class OptimisticOracleV3 {
+        +assertTruth(claim, bond, liveness) bytes32
+        +disputeAssertion(id, disputer)
+        +settleAssertion(id)
+    }
+
+    ReportRegistry --> SlashPool : drains and feeds
+    ReportRegistry --> IERC20_USDC : moves bonds
+    ReportRegistry --> OptimisticOracleV3 : opens assertions
+    OptimisticOracleV3 --> ReportRegistry : resolved and disputed callbacks
+    SlashPool --> IERC20_USDC : pays rewards
+  </div>
+</section>
+
+<section>
+  <h2>8. Report lifecycle — state machine</h2>
+  <p class="lead">A report moves through four states. Two terminal exits: <code>Settled</code> (honest) and <code>Slashed</code>. The <code>attest()</code> path is a self-loop on Honest that records orbital corroboration.</p>
+  <div class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> Submitted : submit(metaRef, imo) + 5 USDC bond
+    Submitted --> Disputed : verifier disputeAssertion + 5 USDC counter-bond
+    Submitted --> Honest : 30s liveness expires (uncontested)
+    Disputed --> Honest : UMA voters uphold report
+    Disputed --> Slashed : UMA voters reject report
+    Honest --> Honest : attest() orbital corroboration
+    Honest --> [*] : Settled event<br>bond returned + 0.10 reward<br>ENS subname minted
+    Slashed --> [*] : Slashed event<br>50 percent verifier · 30 percent pool · 20 percent treasury
+  </div>
+</section>
+
+<section>
+  <h2>9. USDC bond choreography</h2>
+  <p class="lead">Every USDC movement, in order, for both settlement outcomes. <code>transferFrom</code> requires the actor to have <code>approve()</code>d the recipient first.</p>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant R as Reporter EOA
+    participant V as Verifier EOA
+    participant USDC
+    participant Reg as ReportRegistry
+    participant UMA as UMA OOv3
+    participant SP as SlashPool
+    participant Tr as Treasury
+
+    Note over R,Reg: Step 1 — reporter submits
+    R->>USDC: approve(Reg, 5)
+    R->>Reg: submit(metaRef, imo)
+    Reg->>USDC: transferFrom(R, Reg, 5)
+    Reg->>UMA: assertTruth(claim, bond=5)
+
+    Note over V,UMA: Step 2 — verifier disputes (optional)
+    V->>USDC: approve(UMA, 5)
+    V->>UMA: disputeAssertion(id)
+    UMA->>USDC: transferFrom(V, UMA, 5)
+
+    Note over UMA,SP: Step 3a — voters uphold report
+    UMA-->>Reg: assertionResolvedCallback(id, true)
+    Reg->>USDC: transfer(R, 5)
+    Reg->>SP: payReward(R)
+    SP->>USDC: transfer(R, 0.10)
+
+    Note over UMA,Tr: Step 3b — voters reject report
+    UMA-->>Reg: assertionResolvedCallback(id, false)
+    Reg->>USDC: transfer(V, 2.50)
+    Reg->>USDC: transfer(SP, 1.50)
+    Reg->>SP: receiveSlashShare(1.50)
+    Reg->>USDC: transfer(Tr, 1.00)
+  </div>
+</section>
+
+<section>
+  <h2>10. On-chain vs off-chain storage</h2>
+  <p class="lead">What is persisted to Base Sepolia, what lives on Swarm, and how ENS names tie the two together.</p>
+  <div class="mermaid">
+flowchart LR
+    classDef onchain fill:#f4a261,stroke:#b5651d,color:#1b1b1b
+    classDef offchain fill:#90caf9,stroke:#1565c0,color:#1b1b1b
+    classDef ens fill:#95d5b2,stroke:#2d6a4f,color:#1b1b1b
+
+    subgraph On["On-chain (Base Sepolia)"]
+        direction TB
+        rep["reports mapping<br>bytes32 to Report struct"]:::onchain
+        am["assertionToReport mapping"]:::onchain
+        bal["SlashPool USDC balance"]:::onchain
+        atx["orbitalAttestor address (immutable)"]:::onchain
+    end
+
+    subgraph Off["Off-chain (Swarm content-addressed)"]
+        direction TB
+        ph["bzz://photo (JPEG)"]:::offchain
+        mt["bzz://metadata.json"]:::offchain
+        do["bzz://dossier.json"]:::offchain
+        vl["bzz://verifier-log.json"]:::offchain
+        po["bzz://orbital-imagery"]:::offchain
+    end
+
+    subgraph EN["ENS resolvable identity (NameStone)"]
+        direction TB
+        vs["imo-N.vessel.phare.eth"]:::ens
+        vr["handle.verifier.phare.eth"]:::ens
+    end
+
+    rep -- "metaRef bytes32" --> mt
+    rep -- "imo packed" --> vs
+    vs -- "contenthash" --> do
+    vr -- "verifier.log text record" --> vl
+    do --> ph
+    do --> po
+    mt --> ph
+  </div>
+</section>
+
+<section>
+  <h2>11. Sponsor → component map</h2>
+  <p class="lead">Which sponsor surface is exercised by which component, and what work earns the prize.</p>
+  <div class="mermaid">
+flowchart LR
+    classDef eth fill:#f4a261,stroke:#b5651d,color:#1b1b1b
+    classDef ens fill:#95d5b2,stroke:#2d6a4f,color:#1b1b1b
+    classDef swarm fill:#90caf9,stroke:#1565c0,color:#1b1b1b
+    classDef space fill:#ce93d8,stroke:#6a1b9a,color:#1b1b1b
+    classDef sourcify fill:#ffcc80,stroke:#e65100,color:#1b1b1b
+
+    subgraph Sponsors
+        FS["Future Society<br/>$2,500"]:::eth
+        PR["Privacy by Design<br/>$500"]:::eth
+        UX["Best UX Flow<br/>$500"]:::eth
+        EAI["ENS · AI Agents<br/>$2,000"]:::ens
+        ECR["ENS · Creative Use<br/>$2,000"]:::ens
+        SC["SpaceComputer<br/>up to $6,000"]:::space
+        SF["Sourcify<br/>$4,000"]:::sourcify
+    end
+
+    subgraph Components
+        Web["web/ PWA"]
+        Skill["skill/ verifier"]
+        Contracts["contracts/"]
+        Minter["minter/"]
+        Orbital["orbital/"]
+        Plugin["orbital-plugin/"]
+        Storage["Swarm artifacts"]
+    end
+
+    Web --> PR
+    Web --> UX
+    Web --> FS
+    Skill --> EAI
+    Minter --> EAI
+    Minter --> ECR
+    Orbital --> SC
+    Plugin --> SC
+    Contracts --> SF
+    Contracts --> FS
+  </div>
+</section>
+
+<section>
+  <h2>12. Information flow — what data lives where</h2>
+  <p class="lead">Every piece of state in the system, its source of truth, and where consumers read it from.</p>
+  <table>
+    <thead>
+      <tr><th>Information</th><th>Produced by</th><th>Source of truth</th><th>Consumer reads from</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Photo of the vessel</td><td>Reporter camera</td><td>Swarm (<code>bzz://photo</code>)</td><td>Vessel dossier on Swarm</td></tr>
+      <tr><td>Metadata <code>{gps, t, imo, ais_dark, nonce}</code></td><td>Reporter PWA</td><td>Swarm (<code>bzz://meta</code>)</td><td>Verifiers via Swarm gateway</td></tr>
+      <tr><td>Bond escrow $5 USDC</td><td>Reporter wallet</td><td>ReportRegistry contract on Base Sepolia</td><td>UMA OOv3 + on-chain readers</td></tr>
+      <tr><td>Truth assertion (30s liveness)</td><td>ReportRegistry</td><td>UMA OOv3</td><td>UMA event stream</td></tr>
+      <tr><td>Dispute counter-bond</td><td>Verifier wallet</td><td>UMA OOv3</td><td>UMA event stream</td></tr>
+      <tr><td>Sanctions status of IMO</td><td>OpenSanctions <code>maritime</code> scope</td><td>OpenSanctions API</td><td>Minter (cached into ENS records)</td></tr>
+      <tr><td>Vessel public identity</td><td>Minter via NameStone</td><td><code>imo-N.vessel.phare.eth</code></td><td>Any ENS resolver</td></tr>
+      <tr><td>Vessel dossier (full sighting history)</td><td>Minter</td><td>Swarm JSON, pinned by <code>contenthash</code> + <code>vessel.swarm.log</code></td><td>ENS contenthash → Swarm</td></tr>
+      <tr><td>Verifier identity + policy + stats</td><td>Verifier operator + minter</td><td><code>handle.verifier.phare.eth</code> records</td><td>Any ENS resolver</td></tr>
+      <tr><td>Verifier activity log</td><td>Minter / verifier-stats watcher</td><td>Swarm JSON, pointed at by <code>verifier.swarm.log</code></td><td>ENS contenthash → Swarm</td></tr>
+      <tr><td>Verifier soul (self-authored markdown)</td><td>Verifier principal</td><td>Swarm markdown, pointed at by <code>verifier.soul</code></td><td>ENS resolver → Swarm fetch</td></tr>
+      <tr><td>Orbital imagery (mocked source)</td><td>phare-imager plugin (fixture lookup)</td><td>Swarm (<code>bzz://image</code>)</td><td><code>vessel.orbital.image</code> ENS record</td></tr>
+      <tr><td>spaceTEE destination prediction (mocked)</td><td>phare-imager plugin (rule-based stub)</td><td>Swarm JSON with <code>"mocked": true</code></td><td><code>vessel.orbital.tee.prediction</code> ENS record</td></tr>
+      <tr><td>Orbital attestation signature</td><td>SpaceComputer KMS (EIP-191) — real</td><td><code>ReportRegistry.attest()</code> on-chain</td><td>ECDSA.recover by any reader</td></tr>
+      <tr><td>Reporter nonce randomness</td><td>SpaceComputer cTRNG — real</td><td>inside metadata JSON</td><td>Swarm metadata fetch</td></tr>
+      <tr><td>Slash pool balance</td><td>SlashPool contract</td><td>Base Sepolia</td><td>Direct contract read</td></tr>
+      <tr><td>Contract source verification</td><td>Foundry deploy + Sourcify</td><td>Sourcify repository</td><td>Block explorers, auditors</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  Phare · ETHPrague 2026 · solar-punk · open · bonded · citizen-led
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    themeVariables: {
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+      primaryColor: '#faf6ec',
+      primaryTextColor: '#1b1b1b',
+      primaryBorderColor: '#2d6a4f',
+      lineColor: '#555',
+      secondaryColor: '#fff7e6',
+      tertiaryColor: '#ffffff',
+      noteBkgColor: '#fff7e6',
+      noteBorderColor: '#b5651d'
+    },
+    flowchart: { curve: 'basis', padding: 12, useMaxWidth: false },
+    sequence: { mirrorActors: false, boxMargin: 8, useMaxWidth: false },
+    state: { useMaxWidth: false },
+    class: { useMaxWidth: false },
+    securityLevel: 'loose'
+  });
+
+  function attachPanZoom(container) {
+    const svg = container.querySelector('svg');
+    if (!svg) return null;
+    // Strip mermaid's hard-coded sizing — let svg-pan-zoom drive the viewBox.
+    svg.removeAttribute('height');
+    svg.removeAttribute('style');
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.maxWidth = 'none';
+    svg.style.display = 'block';
+
+    let pz;
+    try {
+      pz = svgPanZoom(svg, {
+        zoomEnabled: true,
+        controlIconsEnabled: false,
+        fit: true,
+        center: true,
+        minZoom: 0.2,
+        maxZoom: 12,
+        zoomScaleSensitivity: 0.35,
+        dblClickZoomEnabled: true,
+        mouseWheelZoomEnabled: true
+      });
+    } catch (err) {
+      console.warn('pan-zoom init failed:', err);
+      return null;
+    }
+
+    // Reset-to-fit button
+    const btn = document.createElement('button');
+    btn.className = 'reset-btn';
+    btn.type = 'button';
+    btn.textContent = 'Reset · fit';
+    btn.addEventListener('click', () => {
+      pz.resize();
+      pz.fit();
+      pz.center();
+    });
+    container.appendChild(btn);
+
+    return pz;
+  }
+
+  mermaid.run({ querySelector: '.mermaid' }).then(() => {
+    const instances = [];
+    document.querySelectorAll('.mermaid').forEach(c => {
+      const pz = attachPanZoom(c);
+      if (pz) instances.push(pz);
+    });
+    window.addEventListener('resize', () => {
+      instances.forEach(pz => { try { pz.resize(); pz.fit(); pz.center(); } catch (e) {} });
+    });
+  }).catch(err => console.error('mermaid render failed:', err));
+</script>
+</body>
+</html>
