@@ -11,15 +11,24 @@
   },
   "dependencies": {
     "@ethersphere/bee-js": "^12.1.0",
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.0.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "three": "^0.170.0",
     "viem": "^2.21.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.170.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.14",
     "typescript": "^5.6.0"
   }
 }
