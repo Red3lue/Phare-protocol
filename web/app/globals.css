@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bone:    #f7f3eb;
+  --bone-2:  #ede5d4;
+  --ink:     #0d1311;
+  --turq:    #1ed1c5;
+  --turq-d:  #0e8d84;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bone);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* full-page turquoise dot grid; opacity fades with distance from planet centre.
+   Planet sits ~50% / 50% on the globe section; mask is viewport-fixed so the
+   fade also reads correctly on scroll. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, color-mix(in oklab, var(--turq-d) 60%, transparent) 1.1px, transparent 1.6px);
+  background-size: 22px 22px;
+  background-position: 0 0;
+  opacity: 0.55;
+  mask-image:
+    radial-gradient(ellipse 65% 75% at 50% 50%,
+      rgba(0,0,0,0.95) 0%,
+      rgba(0,0,0,0.7)  35%,
+      rgba(0,0,0,0.25) 65%,
+      rgba(0,0,0,0)    90%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 65% 75% at 50% 50%,
+      rgba(0,0,0,0.95) 0%,
+      rgba(0,0,0,0.7)  35%,
+      rgba(0,0,0,0.25) 65%,
+      rgba(0,0,0,0)    90%);
+}
+
+* { box-sizing: border-box; }
+canvas { display: block; }
+
+html { scroll-behavior: smooth; }
+
+.snap-y { scroll-snap-type: y mandatory; }
+.snap-start { scroll-snap-align: start; }
+
+/* ── glass surfaces ─────────────────────────────────────────────────────── */
+.glass {
+  background: color-mix(in oklab, var(--bone) 38%, transparent);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+.glass-strong {
+  background: color-mix(in oklab, var(--bone) 55%, transparent);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+.glass-soft {
+  background: color-mix(in oklab, var(--bone) 22%, transparent);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+.glass-ink {
+  background: color-mix(in oklab, var(--ink) 40%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+}
+
+/* ── neutral edges (no turquoise) ───────────────────────────────────────── */
+.edge       { border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); }
+.edge-soft  { border: 1px solid color-mix(in oklab, var(--ink) 5%, transparent); }
+.divider    { border-bottom: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); }
+.divider-t  { border-top:    1px solid color-mix(in oklab, var(--ink) 8%, transparent); }
+
+/* ── radii ─────────────────────────────────────────────────────────────── */
+.r-sm  { border-radius: 10px; }
+.r-md  { border-radius: 14px; }
+.r-lg  { border-radius: 18px; }
+.r-xl  { border-radius: 22px; }
+.r-2xl { border-radius: 28px; }
+
+/* ── glow accents (used sparingly on hover/active) ─────────────────────── */
+.turq-glow      { box-shadow: 0 0 28px color-mix(in oklab, var(--turq) 22%, transparent); }
+.turq-glow-soft { box-shadow: 0 0 16px color-mix(in oklab, var(--turq) 14%, transparent); }
+
+/* ── label / mono ─────────────────────────────────────────────────────── */
+.label {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 10px;
+  color: color-mix(in oklab, var(--ink) 55%, var(--bone));
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── scrollbar ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--ink) 12%, transparent); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--ink) 24%, transparent); }
