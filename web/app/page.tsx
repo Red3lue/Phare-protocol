@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createWalletClient, custom } from 'viem';
 import { sepolia } from 'viem/chains';
 import type { Address } from 'viem';
@@ -10,7 +10,43 @@ import Header        from './components/Header';
 import DossierPanel  from './components/DossierPanel';
 import ReportModal   from './components/ReportModal';
 import TablesSection from './components/TablesSection';
-import { FLEET } from './data/fleet';
+import { FLEET, type Vessel } from './data/fleet';
+import { useVessels } from './hooks/useVessels';
+import { vesselDisplay } from './lib/known-vessels';
+
+// Default lat/lon for synthesized on-chain vessels that have no FLEET
+// entry. DEMO_GPS from useReportSubmit (Laconian Gulf, off Cyprus per
+// DESIGN_DOCUMENT §13). Each unknown IMO gets a small jitter so multiple
+// don't stack on top of each other.
+const DEFAULT_LL: readonly [number, number] = [34.7, 33.4];
+
+function synthesizeOnChainVessel(imo: number): Vessel {
+    const meta   = vesselDisplay(imo);
+    const jitter = ((imo % 17) - 8) * 0.4; // ±3.2°, deterministic per IMO
+    const ll: [number, number] = [DEFAULT_LL[0] + jitter, DEFAULT_LL[1] - jitter];
+    return {
+        imo,
+        name:         meta.name,
+        flag:         meta.flag,
+        age:          0,
+        riskScore:    0,
+        aisGap:       'live',
+        lastSeen:     'on-chain',
+        lastLL:       ll,
+        suspectedLL:  ll,
+        suspected:    'on-chain mint',
+        cargo:        '—',
+        lastAisAt:    '',
+        flagsSwapped: 0,
+        owners:       0,
+        sanctions:    meta.sanctions,
+        sightings:    0,
+        disputed:     0,
+        color:        '#1ed1c5',
+        verified:     'pinned',
+        onChain:      true,
+    };
+}
 
 declare global {
     interface Window {
@@ -108,8 +144,28 @@ export default function HomePage() {
         document.getElementById('globe')?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
+    // Merge on-chain vessels into the demo FLEET:
+    //   - IMOs that already exist in FLEET → flagged onChain:true (visual cue
+    //     on the Globe + DossierPanel).
+    //   - IMOs minted on-chain that are NOT in FLEET → synthesized with a
+    //     default position so they still appear on the planet.
+    const onChainVessels = useVessels();
+    const fleet = useMemo<readonly Vessel[]>(() => {
+        const onChainImos = new Set((onChainVessels.data ?? []).map((v) => v.imo));
+        const existingImos = new Set(FLEET.map((v) => v.imo));
+
+        const annotated = FLEET.map((v) =>
+            onChainImos.has(v.imo) ? { ...v, onChain: true } : v,
+        );
+        const synthesized = (onChainVessels.data ?? [])
+            .filter((v) => !existingImos.has(v.imo))
+            .map((v) => synthesizeOnChainVessel(v.imo));
+
+        return [...annotated, ...synthesized];
+    }, [onChainVessels.data]);
+
     const selectedVessel = selectedImo != null
-        ? FLEET.find((v) => v.imo === selectedImo) ?? null
+        ? fleet.find((v) => v.imo === selectedImo) ?? null
         : null;
 
     return (
@@ -137,7 +193,7 @@ export default function HomePage() {
 
                 <div className="absolute inset-0">
                     <Globe
-                        fleet={FLEET}
+                        fleet={fleet}
                         selectedImo={selectedImo}
                         onSelect={(imo) => setSelectedImo(imo)}
                         paused={globePaused}

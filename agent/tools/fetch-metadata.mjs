@@ -11,7 +11,7 @@
 //   { ok:false, error:'BMT mismatch', expected, recomputed } exit 1
 
 import {
-  verifyAndFetchJson,
+  verifyAndFetch,
   BmtMismatchError,
   GatewayFetchError,
 } from './lib/swarm.mjs';
@@ -22,14 +22,20 @@ const [ref] = process.argv.slice(2);
 if (!ref) fail('usage: fetch-metadata.mjs <bzz://hash | https-url>');
 
 try {
-  const out = await verifyAndFetchJson(ref);
+  const out  = await verifyAndFetch(ref);
+  const text = new TextDecoder().decode(out.bytes);
+  let json   = null;
+  try { json = JSON.parse(text); } catch { /* not JSON; that's fine */ }
+
   emit({
-    ok:        true,
-    verified:  out.verified,
-    bmtRoot:   out.bmtRoot,
-    ref:       out.ref,
-    json:      out.json,
-    rawLength: out.bytes.length,
+    ok:           true,
+    verified:     out.verified,
+    bmtRoot:      out.bmtRoot,
+    ref:          out.ref,
+    rawLength:    out.bytes.length,
+    contentType:  json !== null ? 'json' : 'text',
+    json,
+    textPreview:  json !== null ? null : text.slice(0, 400),
   });
 } catch (e) {
   if (e instanceof BmtMismatchError) {

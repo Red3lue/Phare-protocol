@@ -57,5 +57,5 @@ export function verifierEnsName(v: Verifier): string {
 }
 
 export function verifierEnsUrl(v: Verifier): string {
-    return `https://app.ens.domains/${verifierEnsName(v)}`;
+    return `https://sepolia.app.ens.domains/${verifierEnsName(v)}`;
 }

@@ -321,6 +321,20 @@ function Ping({
                     toneMapped={false}
                 />
             </mesh>
+            {/* on-chain marker: a steady outer ring at brighter turquoise,
+                visible only when ReportRegistry has minted this IMO. */}
+            {vessel.onChain && (
+                <mesh>
+                    <ringGeometry args={[0.045, 0.052, 48]} />
+                    <meshBasicMaterial
+                        color="#0e8d84"
+                        transparent
+                        opacity={0.85}
+                        side={THREE.DoubleSide}
+                        toneMapped={false}
+                    />
+                </mesh>
+            )}
             <mesh>
                 <sphereGeometry args={[0.1, 12, 12]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />

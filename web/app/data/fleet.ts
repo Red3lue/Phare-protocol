@@ -42,6 +42,8 @@ export type Vessel = {
     disputed:      number;
     color:         string;
     verified:      'pinned' | 'illustrative';
+    /** True when ReportRegistry/Lighthouse has minted imo-<n>.vessel.phare.eth on Sepolia. Set at render time by page.tsx merging useVessels() output. */
+    onChain?:      boolean;
 };
 
 export const FLEET: readonly Vessel[] = [
@@ -120,7 +122,7 @@ export function ensName(v: Vessel): string {
 }
 
 export function ensUrl(v: Vessel): string {
-    return `https://app.ens.domains/${ensName(v)}`;
+    return `https://sepolia.app.ens.domains/${ensName(v)}`;
 }
 
 export function swarmUrl(ref: string): string {

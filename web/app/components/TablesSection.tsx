@@ -1,39 +1,41 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { FLEET, ensName, ensUrl, swarmUrl, type Vessel } from '../data/fleet';
-import { VERIFIERS, verifierEnsName, verifierEnsUrl, type Verifier } from '../data/verifiers';
+import { useVessels }   from '../hooks/useVessels';
+import { useVerifiers } from '../hooks/useVerifiers';
+import { vesselDisplay } from '../lib/known-vessels';
+import { ensUrl, bzzUrl, type VesselRow, type VerifierRow } from '../lib/chain';
 
 function trim(addr: string) {
     return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
 function bzzShort(ref: string) {
+    if (!ref) return '—';
     const clean = ref.replace(/^bzz:\/\//, '');
     return `bzz://${clean.slice(0, 10)}…`;
 }
 
-function VesselRow({ v, onSelect }: { v: Vessel; onSelect: () => void }) {
+function VesselRowView({ v, onSelect }: { v: VesselRow; onSelect: () => void }) {
+    const meta = vesselDisplay(v.imo);
     return (
         <tr className="divider transition-colors hover:bg-turq-50/50">
             <td className="px-4 py-3">
-                <button
-                    onClick={onSelect}
-                    className="text-left"
-                    title="focus on globe"
-                >
+                <button onClick={onSelect} className="text-left" title="focus on globe">
                     <div className="font-display text-[13px] tracking-tight text-ink hover:text-turq-700">
-                        {v.name}
+                        {meta.name}
                     </div>
                 </button>
             </td>
             <td className="px-4 py-3 font-mono text-[12px] text-ink tabular">{v.imo}</td>
             <td className="px-4 py-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink/55">
-                {v.flag}
+                {meta.flag}
             </td>
             <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-1">
-                    {v.sanctions.map((s) => (
+                    {meta.sanctions.length === 0 ? (
+                        <span className="font-mono text-[11px] text-ink/35">—</span>
+                    ) : meta.sanctions.map((s) => (
                         <span
                             key={s}
                             className="rounded-full bg-turq-50/80 edge-soft px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.2em] text-ink/80"
@@ -44,82 +46,120 @@ function VesselRow({ v, onSelect }: { v: Vessel; onSelect: () => void }) {
                 </div>
             </td>
             <td className="px-4 py-3 font-mono text-[12px] text-ink tabular">{v.sightings}</td>
-            <td className="px-4 py-3 font-mono text-[11px] text-ink/55 tabular">{v.aisGap} ago</td>
+            <td className="px-4 py-3 font-mono text-[12px] text-ink/55 tabular">{v.disputed}</td>
             <td className="px-4 py-3">
                 <a
-                    href={ensUrl(v)}
+                    href={ensUrl(v.ens)}
                     target="_blank"
                     rel="noreferrer"
                     className="font-mono text-[11px] text-turq-700 hover:underline truncate inline-block max-w-[220px]"
-                    title={ensName(v)}
+                    title={v.ens}
                 >
-                    {ensName(v)} ↗
+                    {v.ens} ↗
                 </a>
             </td>
             <td className="px-4 py-3">
-                <a
-                    href={swarmUrl(`vessel-${v.imo}-dossier-mock`)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono text-[11px] text-turq-700 hover:underline"
-                >
-                    bzz ↗
-                </a>
+                {v.swarmLog ? (
+                    <a
+                        href={bzzUrl(v.swarmLog)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-turq-700 hover:underline"
+                        title={v.swarmLog}
+                    >
+                        {bzzShort(v.swarmLog)} ↗
+                    </a>
+                ) : (
+                    <span className="font-mono text-[11px] text-ink/35">—</span>
+                )}
             </td>
         </tr>
     );
 }
 
-function VerifierRow({ a }: { a: Verifier }) {
+function VerifierRowView({ a }: { a: VerifierRow }) {
     return (
         <tr className="divider transition-colors hover:bg-turq-50/50">
             <td className="px-4 py-3">
                 <a
-                    href={verifierEnsUrl(a)}
+                    href={ensUrl(a.ens)}
                     target="_blank"
                     rel="noreferrer"
                     className="font-display text-[13px] tracking-tight text-ink hover:text-turq-700"
-                    title={verifierEnsName(a)}
+                    title={a.ens}
                 >
                     {a.handle}
                 </a>
             </td>
             <td className="px-4 py-3 font-mono text-[11px] text-ink tabular">{trim(a.principal)}</td>
             <td className="px-4 py-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink/55">
-                {a.runtime}
-            </td>
-            <td className="px-4 py-3 font-mono text-[12px] text-ink tabular">{a.disputes}</td>
-            <td className="px-4 py-3 font-mono text-[12px] text-turq-700 tabular">{a.won}</td>
-            <td className="px-4 py-3 font-mono text-[12px] text-ink/55 tabular">{a.lost}</td>
-            <td className="px-4 py-3">
-                <a
-                    href={swarmUrl(a.lastDecision)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono text-[11px] text-turq-700 hover:underline"
-                >
-                    {bzzShort(a.lastDecision)} ↗
-                </a>
+                {a.runtime || '—'}
             </td>
             <td className="px-4 py-3">
-                <a
-                    href={verifierEnsUrl(a)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono text-[11px] text-turq-700 hover:underline truncate inline-block max-w-[200px]"
-                >
-                    {verifierEnsName(a)} ↗
-                </a>
+                {a.lastDecision ? (
+                    <a
+                        href={bzzUrl(a.lastDecision)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-turq-700 hover:underline"
+                        title={a.lastDecision}
+                    >
+                        {bzzShort(a.lastDecision)} ↗
+                    </a>
+                ) : (
+                    <span className="font-mono text-[11px] text-ink/35">—</span>
+                )}
             </td>
             <td className="px-4 py-3">
                 <a
-                    href={swarmUrl(a.soul)}
+                    href={ensUrl(a.ens)}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-mono text-[11px] text-turq-700 hover:underline"
+                    className="font-mono text-[11px] text-turq-700 hover:underline truncate inline-block max-w-[220px]"
                 >
-                    soul ↗
+                    {a.ens} ↗
                 </a>
+            </td>
+            <td className="px-4 py-3">
+                {a.policy ? (
+                    <a
+                        href={bzzUrl(a.policy)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-turq-700 hover:underline"
+                    >
+                        policy ↗
+                    </a>
+                ) : (
+                    <span className="font-mono text-[11px] text-ink/35">—</span>
+                )}
+            </td>
+            <td className="px-4 py-3">
+                {a.soul ? (
+                    <a
+                        href={bzzUrl(a.soul)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-turq-700 hover:underline"
+                    >
+                        soul ↗
+                    </a>
+                ) : (
+                    <span className="font-mono text-[11px] text-ink/35">—</span>
+                )}
+            </td>
+        </tr>
+    );
+}
+
+function StatusRow({ colSpan, message }: { colSpan: number; message: string }) {
+    return (
+        <tr>
+            <td
+                colSpan={colSpan}
+                className="px-4 py-10 text-center font-mono text-[11px] text-ink/35"
+            >
+                {message}
             </td>
         </tr>
     );
@@ -130,6 +170,9 @@ export default function TablesSection({
 }: {
     onFocusVessel: (imo: number) => void;
 }) {
+    const vessels   = useVessels();
+    const verifiers = useVerifiers();
+
     return (
         <section
             id="data"
@@ -147,8 +190,8 @@ export default function TablesSection({
                         registry
                     </h2>
                     <p className="mt-2 max-w-xl font-mono text-[12px] text-ink/55">
-                        Public sightings and the AI agents that adjudicate them. Each row resolves to
-                        its ENS subname and Swarm dossier.
+                        Live on-chain reads of <code>Lighthouse</code> + <code>ReportRegistry</code>{' '}
+                        on Sepolia. Each row resolves to its ENS subname and Swarm dossier.
                     </p>
                 </motion.div>
 
@@ -161,8 +204,17 @@ export default function TablesSection({
                     className="mt-10"
                 >
                     <div className="flex items-center justify-between px-1">
-                        <span className="label">vessels spotted · {FLEET.length}</span>
-                        <span className="label text-ink/35">⚠ illustrative entries flagged</span>
+                        <span className="label">
+                            vessels · {vessels.data?.length ?? 0}
+                            {vessels.loading && !vessels.data ? ' · loading…' : ''}
+                        </span>
+                        <button
+                            onClick={vessels.refetch}
+                            className="label text-ink/55 hover:text-ink transition-colors"
+                            title="refresh on-chain"
+                        >
+                            ↻ refresh
+                        </button>
                     </div>
 
                     <div className="mt-3 rounded-2xl glass edge overflow-x-auto">
@@ -174,8 +226,8 @@ export default function TablesSection({
                                         'imo',
                                         'flag',
                                         'sanctions',
-                                        'sight.',
-                                        'last seen',
+                                        'sightings',
+                                        'disputed',
                                         'ens',
                                         'swarm',
                                     ].map((h) => (
@@ -189,18 +241,15 @@ export default function TablesSection({
                                 </tr>
                             </thead>
                             <tbody>
-                                {FLEET.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={8}
-                                            className="px-4 py-10 text-center font-mono text-[11px] text-ink/35"
-                                        >
-                                            — no entries yet —
-                                        </td>
-                                    </tr>
+                                {vessels.error ? (
+                                    <StatusRow colSpan={8} message={`error: ${vessels.error}`} />
+                                ) : vessels.loading && !vessels.data ? (
+                                    <StatusRow colSpan={8} message="reading chain…" />
+                                ) : !vessels.data || vessels.data.length === 0 ? (
+                                    <StatusRow colSpan={8} message="— no vessels minted yet —" />
                                 ) : (
-                                    FLEET.map((v) => (
-                                        <VesselRow
+                                    vessels.data.map((v) => (
+                                        <VesselRowView
                                             key={v.imo}
                                             v={v}
                                             onSelect={() => onFocusVessel(v.imo)}
@@ -221,8 +270,17 @@ export default function TablesSection({
                     className="mt-12"
                 >
                     <div className="flex items-center justify-between px-1">
-                        <span className="label">ai agents · {VERIFIERS.length}</span>
-                        <span className="label text-ink/35">openclaw · verifier.phare.eth</span>
+                        <span className="label">
+                            ai agents · {verifiers.data?.length ?? 0}
+                            {verifiers.loading && !verifiers.data ? ' · loading…' : ''}
+                        </span>
+                        <button
+                            onClick={verifiers.refetch}
+                            className="label text-ink/55 hover:text-ink transition-colors"
+                            title="refresh on-chain"
+                        >
+                            ↻ refresh
+                        </button>
                     </div>
 
                     <div className="mt-3 rounded-2xl glass edge overflow-x-auto">
@@ -233,11 +291,9 @@ export default function TablesSection({
                                         'handle',
                                         'principal',
                                         'runtime',
-                                        'disputes',
-                                        'won',
-                                        'lost',
                                         'last decision',
                                         'ens',
+                                        'policy',
                                         'soul',
                                     ].map((h) => (
                                         <th
@@ -250,17 +306,16 @@ export default function TablesSection({
                                 </tr>
                             </thead>
                             <tbody>
-                                {VERIFIERS.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={9}
-                                            className="px-4 py-10 text-center font-mono text-[11px] text-ink/35"
-                                        >
-                                            — no entries yet —
-                                        </td>
-                                    </tr>
+                                {verifiers.error ? (
+                                    <StatusRow colSpan={7} message={`error: ${verifiers.error}`} />
+                                ) : verifiers.loading && !verifiers.data ? (
+                                    <StatusRow colSpan={7} message="reading chain…" />
+                                ) : !verifiers.data || verifiers.data.length === 0 ? (
+                                    <StatusRow colSpan={7} message="— no verifiers enrolled yet —" />
                                 ) : (
-                                    VERIFIERS.map((a) => <VerifierRow key={a.handle} a={a} />)
+                                    verifiers.data.map((a) => (
+                                        <VerifierRowView key={a.node} a={a} />
+                                    ))
                                 )}
                             </tbody>
                         </table>
