@@ -12,6 +12,7 @@ import type { Vessel } from '../data/fleet';
 type OrbitControlsImpl = {
     addEventListener: (type: 'start' | 'change' | 'end', cb: () => void) => void;
     removeEventListener: (type: 'start' | 'change' | 'end', cb: () => void) => void;
+    update: () => boolean;
 };
 
 const TEX_EARTH = '/earth_2048.jpg';
@@ -398,7 +399,19 @@ function SelectedArc({ vessel }: { vessel: Vessel }) {
 }
 
 // ── Idle auto-rotate; suppressed during entrance + after first interaction ─
-type TransitionRef = React.MutableRefObject<{ active: boolean; target: THREE.Quaternion }>;
+// Transition state: a target spherical position for the camera, animated
+// over time. Rotating the camera (instead of the globe) keeps OrbitControls'
+// frame intact, so mouse rotation feels identical before and after a click —
+// horizontal drag = azimuth, vertical drag = polar, world-Y stays "up".
+type TransitionRef = React.MutableRefObject<{
+    active: boolean;
+    targetTheta: number;
+    targetPhi: number;
+    targetRadius: number;
+}>;
+
+const POLAR_MIN = Math.PI * 0.08;
+const POLAR_MAX = Math.PI * 0.92;
 
 function GlobeGroup({
     fleet,
@@ -407,6 +420,7 @@ function GlobeGroup({
     interactedRef,
     transitionRef,
     dragRef,
+    controlsRef,
 }: {
     fleet: readonly Vessel[];
     selectedImo: number | null;
@@ -414,6 +428,7 @@ function GlobeGroup({
     interactedRef: React.MutableRefObject<boolean>;
     transitionRef: TransitionRef;
     dragRef: React.MutableRefObject<boolean>;
+    controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
     const groupRef = useRef<THREE.Group>(null!);
     const { camera } = useThree();
@@ -424,20 +439,19 @@ function GlobeGroup({
         if (!v) return;
         if (!groupRef.current) return;
 
-        // Anchor the rotation to the *current screen center*, not a fixed
-        // world frame. With OrbitControls' target at the origin, the point
-        // on the globe currently visible at screen center lies along the
-        // camera direction from the origin. We compute the minimal rotation
-        // that takes the clicked ping (in world space, after the group's
-        // current rotation) onto that direction — so the dot ends up under
-        // the camera regardless of how the user has spun the globe.
-        const localDir = llToVec3(v.lastLL[0], v.lastLL[1], R).normalize();
-        const currentWorldDir = localDir.clone().applyQuaternion(groupRef.current.quaternion);
-        const screenCenterDir = camera.position.clone().normalize();
-        const delta = new THREE.Quaternion().setFromUnitVectors(currentWorldDir, screenCenterDir);
-        transitionRef.current.target
-            .copy(delta)
-            .multiply(groupRef.current.quaternion);
+        // Vessel's world-space direction (after current globe rotation). The
+        // camera will move along this direction at its current orbit radius
+        // so the ping ends up at screen center, while the globe stays in
+        // its existing frame so OrbitControls keeps "up" = world Y.
+        const local = llToVec3(v.lastLL[0], v.lastLL[1], R).normalize();
+        const world = local.clone().applyQuaternion(groupRef.current.quaternion);
+        const sph = new THREE.Spherical().setFromVector3(world);
+        sph.radius = camera.position.length();
+        sph.phi = Math.max(POLAR_MIN, Math.min(POLAR_MAX, sph.phi));
+
+        transitionRef.current.targetTheta = sph.theta;
+        transitionRef.current.targetPhi = sph.phi;
+        transitionRef.current.targetRadius = sph.radius;
         transitionRef.current.active = true;
         interactedRef.current = true;
     }, [selectedImo, fleet, interactedRef, transitionRef, camera]);
@@ -449,11 +463,27 @@ function GlobeGroup({
 
         if (transitionRef.current.active) {
             const k = 1 - Math.pow(0.0008, dt);
-            groupRef.current.quaternion.slerp(transitionRef.current.target, k);
-            const angle = groupRef.current.quaternion.angleTo(transitionRef.current.target);
-            if (angle < 0.005) {
-                groupRef.current.quaternion.copy(transitionRef.current.target);
+            const cur = new THREE.Spherical().setFromVector3(camera.position);
+            // Take the shortest azimuth path (handle the ±π wrap).
+            let dTheta = transitionRef.current.targetTheta - cur.theta;
+            while (dTheta > Math.PI) dTheta -= 2 * Math.PI;
+            while (dTheta < -Math.PI) dTheta += 2 * Math.PI;
+            cur.theta += dTheta * k;
+            cur.phi += (transitionRef.current.targetPhi - cur.phi) * k;
+            cur.radius = transitionRef.current.targetRadius;
+            camera.position.setFromSpherical(cur);
+            camera.lookAt(0, 0, 0);
+
+            const dPhi = transitionRef.current.targetPhi - cur.phi;
+            if (Math.abs(dTheta) < 0.003 && Math.abs(dPhi) < 0.003) {
+                cur.theta = transitionRef.current.targetTheta;
+                cur.phi = transitionRef.current.targetPhi;
+                camera.position.setFromSpherical(cur);
+                camera.lookAt(0, 0, 0);
                 transitionRef.current.active = false;
+                // Re-sync OrbitControls so its internal spherical matches
+                // the new camera position before the user takes over.
+                controlsRef.current?.update();
             }
             return;
         }
@@ -504,24 +534,33 @@ function ControlsBridge({
         const ctl = controlsRef.current;
         if (!ctl) return;
         // OrbitControls fires `start` on the first pointerdown, `change` on
-        // every camera update during a drag, and `end` on pointerup. We treat
-        // a gesture as a drag the moment a `change` fires — taps do not move
-        // the camera, so they never produce a `change`. dragRef is preserved
-        // through the click event that follows pointerup so onClick handlers
-        // can suppress selection mid-drag.
+        // every camera update (user input AND programmatic), and `end` on
+        // pointerup. We only flag `dragRef` while a user gesture is active
+        // (between start and end) — programmatic camera moves during the
+        // click-to-vessel transition emit `change` too and must not be
+        // confused with user drags. dragRef is preserved through the click
+        // event that follows pointerup so ping onClick handlers can suppress
+        // selection mid-drag.
+        let gestureActive = false;
         const onStart = () => {
             interactedRef.current = true;
             transitionRef.current.active = false;
             dragRef.current = false;
+            gestureActive = true;
         };
         const onChange = () => {
-            dragRef.current = true;
+            if (gestureActive) dragRef.current = true;
+        };
+        const onEnd = () => {
+            gestureActive = false;
         };
         ctl.addEventListener('start', onStart);
         ctl.addEventListener('change', onChange);
+        ctl.addEventListener('end', onEnd);
         return () => {
             ctl.removeEventListener('start', onStart);
             ctl.removeEventListener('change', onChange);
+            ctl.removeEventListener('end', onEnd);
         };
     }, [controlsRef, interactedRef, transitionRef, dragRef]);
     return null;
@@ -541,9 +580,11 @@ export default function Globe({
     const interactedRef = useRef(false);
     const dragRef = useRef(false);
     const controlsRef = useRef<OrbitControlsImpl | null>(null);
-    const transitionRef = useRef<{ active: boolean; target: THREE.Quaternion }>({
+    const transitionRef = useRef({
         active: false,
-        target: new THREE.Quaternion(),
+        targetTheta: 0,
+        targetPhi: 0,
+        targetRadius: 0,
     });
 
     return (
@@ -567,6 +608,7 @@ export default function Globe({
                     interactedRef={interactedRef}
                     transitionRef={transitionRef}
                     dragRef={dragRef}
+                    controlsRef={controlsRef}
                 />
             </Suspense>
             <ControlsBridge
@@ -582,8 +624,8 @@ export default function Globe({
                 rotateSpeed={0.45}
                 enableDamping
                 dampingFactor={0.12}
-                minPolarAngle={Math.PI * 0.28}
-                maxPolarAngle={Math.PI * 0.72}
+                minPolarAngle={POLAR_MIN}
+                maxPolarAngle={POLAR_MAX}
             />
         </Canvas>
     );
