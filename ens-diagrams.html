@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phare — ENS Connection Diagrams</title>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "dark",
+    themeVariables: {
+      darkMode: true,
+      background: "#0e1116",
+      primaryColor: "#1e3a5f",
+      primaryTextColor: "#e6edf3",
+      primaryBorderColor: "#5a8dcc",
+      lineColor: "#8b949e",
+      secondaryColor: "#3d2b4a",
+      tertiaryColor: "#2b4a3d",
+      fontSize: "14px"
+    },
+    sequence: { useMaxWidth: true, wrap: true, mirrorActors: false },
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" }
+  });
+</script>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --ink: #e6edf3;
+    --muted: #8b949e;
+    --accent: #5a8dcc;
+    --vessel: #a07fb8;
+    --agent: #7fb89a;
+    --rule: #30363d;
+    --code-bg: #0a0d12;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  header {
+    padding: 3rem 2rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    background: linear-gradient(180deg, #1e3a5f22 0%, transparent 100%);
+  }
+  header h1 {
+    margin: 0 0 0.5rem;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header .subtitle {
+    color: var(--muted);
+    font-size: 1.05rem;
+    max-width: 70ch;
+  }
+  header .pill {
+    display: inline-block;
+    background: #1e3a5f;
+    color: #cfe1ff;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin: 0 0.25rem 0 0;
+    border: 1px solid var(--accent);
+  }
+  nav {
+    position: sticky; top: 0;
+    background: rgba(14,17,22,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.75rem 2rem;
+    z-index: 10;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    margin-right: 1.25rem;
+    font-size: 0.85rem;
+    transition: color 0.15s;
+  }
+  nav a:hover { color: var(--ink); }
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  section {
+    margin-bottom: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--rule);
+  }
+  section:first-of-type { border-top: none; }
+  section h2 {
+    font-size: 1.6rem;
+    margin: 0 0 0.5rem;
+    color: var(--ink);
+  }
+  section h2 .num {
+    color: var(--accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 500;
+    margin-right: 0.5rem;
+  }
+  section .lede {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    max-width: 80ch;
+  }
+  .diagram {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+  .diagram .mermaid {
+    text-align: center;
+  }
+  .explanation {
+    background: var(--panel-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0 0;
+  }
+  .explanation h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  .explanation p { margin: 0.5rem 0; }
+  .explanation p:first-child { margin-top: 0; }
+  .explanation p:last-child { margin-bottom: 0; }
+  .explanation ul { margin: 0.5rem 0; padding-left: 1.2rem; }
+  .explanation li { margin: 0.25rem 0; }
+  code {
+    background: var(--code-bg);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em;
+    color: #e6edf3;
+    border: 1px solid var(--rule);
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  @media (max-width: 800px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    main, header, nav { padding-left: 1rem; padding-right: 1rem; }
+  }
+  .compare {
+    background: var(--panel-2);
+    border-radius: 6px;
+    padding: 1rem;
+    border: 1px solid var(--rule);
+  }
+  .compare.vessel { border-left: 3px solid var(--vessel); }
+  .compare.agent  { border-left: 3px solid var(--agent); }
+  .compare h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+  }
+  .compare.vessel h4 { color: var(--vessel); }
+  .compare.agent  h4 { color: var(--agent); }
+  .compare ul { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; }
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Phare — ENS Connection Diagrams</h1>
+  <p class="subtitle">
+    Visual walkthrough of the on-chain ENS layer for Phare: how
+    <code>phare.eth</code> roots two namespaces, how <code>Lighthouse.sol</code>
+    mediates every name write, and how vessels and verifier agents acquire
+    sovereign on-chain identities on Sepolia.
+  </p>
+  <p>
+    <span class="pill">Sepolia</span>
+    <span class="pill">NameWrapper</span>
+    <span class="pill">PublicResolver</span>
+    <span class="pill">UMA OOv3</span>
+    <span class="pill">Swarm</span>
+  </p>
+  <p class="subtitle" style="margin-top: 0.75rem; font-size: 0.9rem;">
+    Sources: <code>LIGHTHOUSE_SPEC.md</code>, <code>ENS_INIT.md</code>, <code>DESIGN_DOCUMENT.md</code>.
+  </p>
+</header>
+
+<nav>
+  <a href="#s1">1. Namespace</a>
+  <a href="#s2">2. Components</a>
+  <a href="#s3">3. Pre-event setup</a>
+  <a href="#s4">4. Trust asymmetry</a>
+  <a href="#s5">5. Vessel mint</a>
+  <a href="#s6">6. Verifier enroll</a>
+  <a href="#s7">7. Self-write</a>
+  <a href="#s8">8. On-chain vs Swarm</a>
+  <a href="#s9">9. Demo slice</a>
+</nav>
+
+<main>
+
+<!-- ============================================ -->
+<section id="s1">
+  <h2><span class="num">§1</span>ENS namespace hierarchy</h2>
+  <p class="lede">
+    Two namespaces live under the project's parent name <code>phare.eth</code>:
+    one for sanctioned vessels, one for verifier agents. Both parents are wrapped
+    in the NameWrapper and have <code>CANNOT_UNWRAP</code> burnt, which is the
+    prerequisite that lets us burn child fuses below them.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+graph TD
+    ETH([.eth root])
+    PHARE["phare.eth<br/><i>wrapped, CANNOT_UNWRAP burnt</i><br/>owner: deployer EOA"]
+    VESSEL["vessel.phare.eth<br/><i>CANNOT_UNWRAP burnt</i><br/>owner: deployer EOA<br/>operator: Lighthouse"]
+    VERIFIER["verifier.phare.eth<br/><i>CANNOT_UNWRAP burnt</i><br/>owner: deployer EOA<br/>operator: Lighthouse"]
+    V1["imo-9133701.vessel.phare.eth<br/><i>FUSES_VESSEL: PCC + CANNOT_TRANSFER + CANNOT_UNWRAP</i><br/>owner: Lighthouse contract"]
+    V2["imo-9259325.vessel.phare.eth<br/><i>per sanctioned IMO ever sighted</i>"]
+    A1["agent-3a4b5c.verifier.phare.eth<br/><i>FUSES_VERIFIER: PCC only</i><br/>owner: verifier principal EOA"]
+    A2["agent-9f2e1a.verifier.phare.eth<br/><i>per OpenClaw skill install</i>"]
+
+    ETH --> PHARE
+    PHARE --> VESSEL
+    PHARE --> VERIFIER
+    VESSEL --> V1
+    VESSEL --> V2
+    VERIFIER --> A1
+    VERIFIER --> A2
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>What to read here</h4>
+    <p>
+      Three layers, top-to-bottom: the ENS root, Phare's two
+      sub-roots, and the leaves. Vessel leaves are minted with
+      a <em>vessel-style</em> fuse policy, verifier leaves with a
+      lighter <em>agent-style</em> fuse policy. Section 4 explains the
+      asymmetry. Vessel labels are deterministic (<code>imo-&lt;n&gt;</code>),
+      verifier handles are derived from the last 6 hex chars of the agent's
+      self-generated address (collision rate ≈ 1 in 16M, demo-acceptable).
+    </p>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s2">
+  <h2><span class="num">§2</span>Component interactions with the ENS layer</h2>
+  <p class="lede">
+    <code>Lighthouse.sol</code> is the single contract that mediates every
+    ENS write. <code>ReportRegistry</code> is its sole authority for vessel
+    writes; verifier wallets self-enroll directly. After enrollment, verifiers
+    write their own records to <code>PublicResolver</code> without going
+    through <code>Lighthouse</code> — a deliberate consequence of burning PCC
+    on the agent's name.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+graph LR
+    subgraph offchain[Off-chain actors]
+        PWA[Reporter PWA<br/>web/]
+        SKILL[Verifier Skill<br/>OpenClaw]
+        ORB[Orbital Orchestrator<br/>orbital/]
+    end
+
+    subgraph onchain[Sepolia on-chain]
+        RR[ReportRegistry.sol]
+        LH[Lighthouse.sol<br/><b>single ENS gateway</b>]
+        NW[NameWrapper]
+        PR[PublicResolver]
+        REG[ENS Registry]
+    end
+
+    subgraph ens[ENS subnames]
+        VESS[imo-N.vessel.phare.eth]
+        VERIF[handle.verifier.phare.eth]
+    end
+
+    PWA -->|submit + bond| RR
+    ORB -->|attest| RR
+    RR -->|nameVessel<br/>recordSighting<br/>recordOrbital<br/>onlyRegistry| LH
+
+    SKILL -->|enrollVerifier<br/>permissionless| LH
+    SKILL -->|setText verifier.lastDecision<br/>direct, post-PCC| PR
+
+    LH -->|setSubnodeRecord| NW
+    LH -->|setText / setContenthash| PR
+    NW --> REG
+    PR --> REG
+
+    NW -.mints.-> VESS
+    NW -.mints.-> VERIF
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>What to read here</h4>
+    <ul>
+      <li><strong>One contract owns the ENS surface.</strong> Every name write goes through <code>Lighthouse</code>, except for the verifier's own post-enrollment writes (which go straight to <code>PublicResolver</code>).</li>
+      <li><strong>Two write authorities.</strong> Vessel writes are <code>onlyRegistry</code>: only <code>ReportRegistry</code> can call them. Verifier writes are permissionless: any wallet self-enrolls.</li>
+      <li><strong>Operator approval is the trick.</strong> The deployer doesn't transfer the parent names to <code>Lighthouse</code> — it grants <code>setApprovalForAll</code>. That keeps the deployer key as a revocation safety net while letting <code>Lighthouse</code> mint children under either parent.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s3">
+  <h2><span class="num">§3</span>Pre-event setup — 9 transactions</h2>
+  <p class="lede">
+    One-shot bootstrap from a single deployer key. After step&nbsp;9, the
+    deployer never signs another ENS-related transaction during the demo —
+    <code>Lighthouse</code> handles everything.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor D as Deployer EOA
+    participant ENS as ENS Manager (browser)
+    participant NW as NameWrapper
+    participant LHC as Lighthouse contract
+
+    D->>ENS: 1. Register phare.eth (commit/reveal, ~0.005 ETH)
+    Note over ENS,NW: Manager wraps by default → ERC-1155
+    D->>NW: 2. setSubnodeOwner(phare, "vessel", D, 0, max)
+    D->>NW: 3. setSubnodeOwner(phare, "verifier", D, 0, max)
+    D->>NW: 4. setFuses(phare.eth, CANNOT_UNWRAP=1)
+    D->>NW: 5. setChildFuses(phare, "vessel", PCC|CANNOT_UNWRAP=65537)
+    D->>NW: 6. setChildFuses(phare, "verifier", PCC|CANNOT_UNWRAP=65537)
+    D->>LHC: 7. forge create ReportRegistry(orbitalAttestor)
+    D->>LHC: 8. forge create Lighthouse(NW, resolver, vesselNode, verifierNode, RR)
+    D->>NW: 9. setApprovalForAll(Lighthouse, true)
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>Why this exact ordering</h4>
+    <ul>
+      <li><strong>Burn parent fuses before child fuses.</strong> <code>setChildFuses</code> on a child reverts unless the parent's <code>CANNOT_UNWRAP</code> is already burnt. That's why step 4 precedes 5 and 6.</li>
+      <li><strong>Use <code>setChildFuses</code>, not <code>setFuses</code>, on the children.</strong> It lets the parent owner burn <code>PARENT_CANNOT_CONTROL</code> and <code>CANNOT_UNWRAP</code> in one go, in the right order.</li>
+      <li><strong>Deploy <code>ReportRegistry</code> before <code>Lighthouse</code>.</strong> <code>Lighthouse</code>'s <code>reportRegistry</code> field is immutable — it must know the registry address at construction time.</li>
+      <li><strong><code>setApprovalForAll</code> is one tx, not two.</strong> A single approval covers every wrapped name held by the deployer.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s4">
+  <h2><span class="num">§4</span>Trust-model asymmetry — vessel vs verifier</h2>
+  <p class="lede">
+    The most distinctive design choice in the ENS layer. Same registrar,
+    mirror-image fuse policies, opposite trust assumptions.
+  </p>
+
+  <div class="grid-2">
+    <div class="compare vessel">
+      <h4>Vessel subname</h4>
+      <ul>
+        <li><strong>Owner:</strong> <code>Lighthouse</code> contract</li>
+        <li><strong>Fuses burnt:</strong> PCC + <code>CANNOT_TRANSFER</code> + <code>CANNOT_UNWRAP</code></li>
+        <li><strong>Writable by:</strong> <code>Lighthouse</code>, only via <code>ReportRegistry</code></li>
+        <li><strong>Permanence:</strong> sealed forever to the contract</li>
+        <li><strong>Why:</strong> a vessel cannot hold a wallet — its identity must be tamper-evident infrastructure curated by settled facts</li>
+      </ul>
+    </div>
+    <div class="compare agent">
+      <h4>Verifier subname</h4>
+      <ul>
+        <li><strong>Owner:</strong> verifier principal EOA</li>
+        <li><strong>Fuses burnt:</strong> PCC only</li>
+        <li><strong>Writable by:</strong> the principal, directly</li>
+        <li><strong>Permanence:</strong> belongs to the keeper</li>
+        <li><strong>Why:</strong> a verifier <em>is</em> a wallet — policy / soul / lastDecision are self-curated public statements</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="mermaid">
+graph TB
+    subgraph vessel_side[Vessel subname — imo-N.vessel.phare.eth]
+        VO[Owner: Lighthouse contract]
+        VF["Fuses: PCC + CANNOT_TRANSFER + CANNOT_UNWRAP"]
+        VW[Writable by: Lighthouse, via ReportRegistry only]
+        VP[Permanence: sealed forever to the contract]
+    end
+
+    subgraph verifier_side[Verifier subname — handle.verifier.phare.eth]
+        AO[Owner: verifier principal EOA]
+        AF["Fuses: PCC only"]
+        AW[Writable by: the principal, directly]
+        AP[Permanence: belongs to the keeper]
+    end
+
+    VO --> VF --> VW --> VP
+    AO --> AF --> AW --> AP
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>The PCC consequence</h4>
+    <p>
+      <code>PARENT_CANNOT_CONTROL</code> is the fuse that emancipates a
+      child from its parent. Once burnt, neither the parent owner nor
+      <code>Lighthouse</code> itself can revoke or rewrite the child. For the
+      verifier, this is the design goal — the agent owns its name. For the
+      vessel, PCC is paired with <code>CANNOT_TRANSFER</code> to lock the
+      token to <code>Lighthouse</code> forever, so vessel identities can
+      neither be moved nor sold.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s5">
+  <h2><span class="num">§5</span>Vessel — first sighting flow</h2>
+  <p class="lede">
+    A settled <code>ReportRegistry</code> event triggers the mint and the
+    initial records, atomically inside the settlement callback.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor R as Reporter PWA
+    participant RR as ReportRegistry
+    participant UMA as UMA OOv3
+    participant LH as Lighthouse
+    participant NW as NameWrapper
+    participant PR as PublicResolver
+
+    R->>RR: submit(report, $5 USDC bond)
+    RR->>UMA: assertTruth("Report at bzz://… is true")
+    Note over UMA: liveness window (≈1 min for demo)
+    UMA-->>RR: assertionResolvedCallback(id, true)
+    RR->>RR: _onSettled
+    RR->>LH: nameVessel(imo, swarmRef)
+    LH->>NW: setSubnodeRecord(vesselParent, "imo-9133701",<br/>owner=address(this), FUSES_VESSEL, max)
+    NW-->>LH: node
+    LH->>PR: setText(node, "vessel.imo", "9133701")
+    LH->>PR: setText(node, "vessel.swarm.log", "bzz://…")
+    LH-->>RR: emit VesselNamed(imo, node, ens)
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>What to read here</h4>
+    <p>
+      The mint and the first text records are written in the same transaction
+      as the UMA settlement — a single atomic state transition. By the time
+      <code>VesselNamed</code> is emitted,
+      <code>imo-9133701.vessel.phare.eth</code> resolves in any ENS-aware
+      browser. Subsequent sightings of the same vessel skip the mint and call
+      <code>recordSighting</code>, which only touches <code>PublicResolver</code>.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s6">
+  <h2><span class="num">§6</span>Verifier — self-enrollment flow</h2>
+  <p class="lede">
+    Permissionless. Any wallet can call <code>enrollVerifier</code> and walks
+    away owning a wrapped ERC-1155 with PCC burnt.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor V as Verifier wallet (OpenClaw skill)
+    participant SW as Swarm
+    participant LH as Lighthouse
+    participant NW as NameWrapper
+    participant PR as PublicResolver
+
+    Note over V: phase: needs-ens<br/>handle = "agent-" + last-6-hex(addr)
+    V->>SW: pin policy.json → bzz://policy
+    V->>SW: pin soul.md → bzz://soul
+    V->>LH: enrollVerifier("agent-3a4b5c", bzz://policy, bzz://soul)
+    LH->>NW: setSubnodeRecord(verifierParent, "agent-3a4b5c",<br/>owner=msg.sender, FUSES_VERIFIER, max)
+    NW-->>LH: node
+    LH->>PR: setText(node, "verifier.policy", bzz://policy)
+    LH->>PR: setText(node, "verifier.soul", bzz://soul)
+    LH->>PR: setText(node, "verifier.runtime", "openclaw")
+    LH-->>V: emit VerifierEnrolled(principal, handle, node)
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>State machine context</h4>
+    <p>
+      The OpenClaw skill governs its lifecycle through four phases:
+      <code>init</code> → <code>needs-funding</code> → <code>needs-ens</code> →
+      <code>running</code>. This sequence is the <code>needs-ens</code> phase.
+      Once enrolled, the skill enters <code>running</code> and only then begins
+      polling UMA for assertions to dispute. Onboarding is gated on user chat
+      input, not the heartbeat tick — the agent does not waste resources before
+      it has an identity.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s7">
+  <h2><span class="num">§7</span>Verifier — post-dispute self-write</h2>
+  <p class="lede">
+    After PCC is burnt, the verifier owns its name outright and writes its own
+    reasoning trail. <code>Lighthouse</code> is no longer in the path.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor V as Verifier wallet
+    participant UMA as UMA OOv3
+    participant RR as ReportRegistry
+    participant SW as Swarm
+    participant PR as PublicResolver
+
+    UMA-->>V: AssertionMade event<br/>(callback recipient = ReportRegistry)
+    V->>SW: fetch metadata.json (Verified Fetch)
+    V->>V: evaluate against policy → "fake"
+    V->>SW: pin reasoning.json → bzz://reasoning
+    V->>UMA: disputeAssertion(id, counter-bond)
+    Note over UMA: voters resolve…
+    UMA-->>RR: assertionResolvedCallback(id, false)
+    V->>PR: setText(node, "verifier.lastDecision", bzz://reasoning)
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>Why this matters</h4>
+    <p>
+      <code>verifier.lastDecision</code> is a live, self-attested public
+      reasoning trail — written by the agent itself, immediately after every
+      dispute. Because PCC is burnt on the agent's name, no parent and no
+      registrar can interfere with this write. The verifier's identity, policy,
+      and decision history are all on-chain ENS records that the verifier's own
+      key controls. This is the prize-relevant property for "ENS for AI Agents".
+    </p>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s8">
+  <h2><span class="num">§8</span>Records — on-chain vs Swarm</h2>
+  <p class="lede">
+    <code>LIGHTHOUSE_SPEC.md §6</code> deliberately keeps only summary fields on-chain.
+    Everything else is reachable via one extra Swarm fetch — roughly 70%
+    gas reduction vs. writing the full record set, while remaining lossless.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+graph LR
+    subgraph vessel_node[imo-N.vessel.phare.eth]
+        direction TB
+        VOC["<b>On-chain text records</b><br/>vessel.imo<br/>vessel.swarm.log<br/>vessel.sightings.count<br/>vessel.sightings.disputed<br/>vessel.orbital.image<br/>vessel.orbital.imageHash<br/>vessel.orbital.tee.prediction<br/>contenthash"]
+    end
+
+    subgraph verifier_node[handle.verifier.phare.eth]
+        direction TB
+        AOC["<b>On-chain text records</b><br/>verifier.policy<br/>verifier.soul<br/>verifier.runtime<br/>verifier.lastDecision<br/>contenthash"]
+    end
+
+    subgraph swarm[Swarm — content-addressed]
+        direction TB
+        VS["<b>Vessel dossier JSON</b><br/>full sighting history<br/>aliases / flag / AIS-dark<br/>reporter list<br/>verifier list<br/>orbital_corroboration block<br/>TEE inference doc"]
+        AS["<b>Verifier artifacts</b><br/>policy JSON full<br/>soul markdown<br/>activity log JSON<br/>per-dispute reasoning<br/>stats derivable"]
+    end
+
+    VOC -. vessel.swarm.log + contenthash .-> VS
+    AOC -. policy / soul / lastDecision .-> AS
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>The split rule</h4>
+    <ul>
+      <li><strong>On-chain:</strong> the discrete fields a UI needs for fast reads (sanction status, current Swarm pointer, last decision pointer).</li>
+      <li><strong>On Swarm:</strong> append-only history, free-form prose, derivable counters, anything large or rapidly-changing.</li>
+      <li><strong>Bridges:</strong> <code>contenthash</code> is the ENS-native pointer; <code>vessel.swarm.log</code> / <code>verifier.swarm.log</code> mirror the same Swarm hash as a plain text record for non-ENS tooling. Both always point at the same content.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<section id="s9">
+  <h2><span class="num">§9</span>End-to-end demo slice (ENS perspective)</h2>
+  <p class="lede">
+    Composition of the previous flows into the live-demo timeline. Three
+    artifacts on the screen at the end: a vessel ENS subname, a verifier ENS
+    subname, and a self-curated reasoning trail.
+  </p>
+
+  <div class="diagram">
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor V as Verifier (pre-enrolled)
+    actor R as Reporter PWA
+    participant RR as ReportRegistry
+    participant UMA as UMA OOv3
+    participant LH as Lighthouse
+    participant ENS as ENS browser
+
+    Note over V: agent-3a4b5c already enrolled.<br/>verifier.lastDecision = empty.
+    R->>RR: submit(IMO 9133701, photo, $5)
+    RR->>UMA: assertTruth(...)
+    Note over UMA: 1-min liveness — no dispute
+    UMA-->>RR: resolved(true)
+    RR->>LH: nameVessel(9133701, swarmRef)
+    Note over LH,ENS: imo-9133701.vessel.phare.eth resolvable
+
+    R->>RR: submit(IMO 9999999, fabricated photo)
+    RR->>UMA: assertTruth(...)
+    V->>UMA: disputeAssertion(id, counter-bond)
+    Note over UMA: voters → false
+    UMA-->>RR: resolved(false)
+    V->>V: pin reasoning.json
+    V->>ENS: setText(verifier.lastDecision, bzz://reasoning)
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h4>The closing frame</h4>
+    <p>
+      Both subnames resolve in stock ENS tooling. No project-controlled API in
+      the read path. The vessel's records are sealed to <code>Lighthouse</code>;
+      the verifier's records are written by the verifier itself. The reasoning
+      JSON pinned to Swarm is reachable from
+      <code>verifier.lastDecision</code> in one click. The graph is fully
+      browsable through ENS alone.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Phare — ETHPrague 2026 · ENS layer documentation · diagrams generated from
+  <code>LIGHTHOUSE_SPEC.md</code>, <code>ENS_INIT.md</code>, <code>DESIGN_DOCUMENT.md</code>
+</footer>
+
+</body>
+</html>
