@@ -2,14 +2,15 @@
   "name": "web",
   "version": "0.0.0",
   "private": true,
-  "description": "Phare reporter PWA — camera + GPS + WebAuthn + Swarm upload + viem (DESIGN_DOCUMENT §4.3)",
+  "description": "Phare reporter PWA — camera + GPS + Swarm upload + viem (DESIGN_DOCUMENT §4.3)",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3334",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@ethersphere/bee-js": "^12.1.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
