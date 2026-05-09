@@ -8,6 +8,21 @@ importers:
 
   .: {}
 
+  agent:
+    dependencies:
+      '@ethersphere/bee-js':
+        specifier: ^12.1.0
+        version: 12.1.0
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      skill:
+        specifier: workspace:*
+        version: link:../skill
+      viem:
+        specifier: ^2.21.0
+        version: 2.48.11(typescript@5.9.3)
+
   contracts: {}
 
   minter: {}

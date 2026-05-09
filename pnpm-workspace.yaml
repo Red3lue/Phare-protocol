@@ -1,6 +1,7 @@
 packages:
   - "web"
   - "skill"
+  - "agent"
   - "suggester"
   - "minter"
   - "orbital"

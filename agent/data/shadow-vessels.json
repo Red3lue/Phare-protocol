@@ -1,0 +1,19 @@
+{
+  "_comment": "Local mirror of OpenSanctions maritime hits, used by evaluate.mjs as an informational cross-reference. Per NICK_SPEC §15 this is informational only — does not branch the decision; the ASI fixture verdict is authoritative for the demo.",
+  "vessels": [
+    {
+      "imo": 9133701,
+      "name": "PABLO",
+      "flag": "Cook Islands",
+      "sanction": "OFAC SDN — IMO sanctioned for shadow-fleet operations",
+      "aliases": ["PABLO"]
+    },
+    {
+      "imo": 9259325,
+      "name": "YOUNG YONG",
+      "flag": "Cameroon",
+      "sanction": "Russia oil price-cap evasion (UK OFSI)",
+      "aliases": ["YOUNG YONG"]
+    }
+  ]
+}

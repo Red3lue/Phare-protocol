@@ -1,0 +1,26 @@
+{
+  "name": "agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "phare/verifier — local OpenClaw skill (NICK_SPEC §11, DESIGN_DOCUMENT §4.4)",
+  "scripts": {
+    "install:skill": "rsync -a --delete --exclude state --exclude node_modules --exclude .env ./ $HOME/.agents/skills/phare-verifier/",
+    "tool:gen-wallet":        "node tools/gen-wallet.mjs",
+    "tool:check-balance":     "node tools/check-balance.mjs",
+    "tool:status":            "node tools/status.mjs",
+    "tool:enroll":            "node tools/enroll.mjs",
+    "tool:poll-uma":          "node tools/poll-uma.mjs",
+    "tool:evaluate":          "node tools/evaluate.mjs",
+    "tool:dispute":           "node tools/dispute.mjs",
+    "tool:set-last-decision": "node tools/set-last-decision.mjs",
+    "tool:fetch-metadata":    "node tools/fetch-metadata.mjs",
+    "tool:pin-reasoning":     "node tools/pin-reasoning.mjs"
+  },
+  "dependencies": {
+    "skill": "workspace:*",
+    "@ethersphere/bee-js": "^12.1.0",
+    "viem": "^2.21.0",
+    "dotenv": "^16.4.5"
+  }
+}

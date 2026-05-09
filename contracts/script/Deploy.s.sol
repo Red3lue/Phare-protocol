@@ -207,7 +207,15 @@ contract Deploy is Script {
         _patchOne(string.concat(root, "/../web/.env.example"), "NEXT_PUBLIC_REPORT_REGISTRY", regStr);
         _patchOne(string.concat(root, "/../web/.env.example"), "NEXT_PUBLIC_LIGHTHOUSE",      lhStr);
 
-        console2.log("env files patched   : .env / .env.example / web/.env (if exists) / web/.env.example");
+        _patchOne(string.concat(root, "/../agent/.env"),         "SLASH_POOL",      slashStr);
+        _patchOne(string.concat(root, "/../agent/.env"),         "REPORT_REGISTRY", regStr);
+        _patchOne(string.concat(root, "/../agent/.env"),         "LIGHTHOUSE",      lhStr);
+
+        _patchOne(string.concat(root, "/../agent/.env.example"), "SLASH_POOL",      slashStr);
+        _patchOne(string.concat(root, "/../agent/.env.example"), "REPORT_REGISTRY", regStr);
+        _patchOne(string.concat(root, "/../agent/.env.example"), "LIGHTHOUSE",      lhStr);
+
+        console2.log("env files patched   : .env / .env.example / web/.env / web/.env.example / agent/.env / agent/.env.example (if present)");
     }
 
     // ─── Namehash resolver ───────────────────────────────────────────────

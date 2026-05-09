@@ -1,0 +1,30 @@
+{
+  "_comment": "Mocked ASI verdict, keyed by IMO. The verifier consults this in evaluate.mjs. A `default` entry covers any IMO not explicitly listed. Per NICK_SPEC §7.5: unallocated / out-of-range IMOs default to fake.",
+  "default": {
+    "verdict": "fake",
+    "confidence": 0.62,
+    "reasoning": "IMO not present in OpenSanctions maritime cache and not in the curated honest-IMO list — treat as suspicious for demo."
+  },
+  "verdicts": {
+    "9133701": {
+      "verdict": "ok",
+      "confidence": 0.91,
+      "reasoning": "PABLO — sanctioned IMO, present in shadow-vessels.json, photo plausibly maritime, accept."
+    },
+    "9259325": {
+      "verdict": "ok",
+      "confidence": 0.88,
+      "reasoning": "YOUNG YONG — sanctioned IMO, present in shadow-vessels.json, accept."
+    },
+    "9999999": {
+      "verdict": "fake",
+      "confidence": 0.97,
+      "reasoning": "IMO 9999999 is unallocated — outside the assigned range. Adversarial-demo fixture."
+    },
+    "0000000": {
+      "verdict": "fake",
+      "confidence": 0.99,
+      "reasoning": "Zero IMO is invalid by definition."
+    }
+  }
+}

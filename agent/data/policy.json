@@ -1,0 +1,52 @@
+{
+  "name": "phare-verifier",
+  "version": "0.1.0",
+  "runtime": "openclaw",
+  "description": "Demo verifier policy. Watches ReportRegistry.Submitted on Sepolia and disputes reports whose IMO matches a `fake` verdict in the local ASI fixture or whose IMO falls outside the assigned IMO range.",
+  "scope": {
+    "chainId": 11155111,
+    "contracts": {
+      "reportRegistry": "patched-from-env",
+      "lighthouse":     "patched-from-env",
+      "umaOOv3":        "0xFd9e2642a170aDD10F53Ee14a93FcF2F31924944"
+    },
+    "bondCurrency": "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9"
+  },
+  "checks": [
+    {
+      "id": "asi-fixture",
+      "kind": "imo-keyed-verdict",
+      "source": "agent/data/asi-fixtures.json",
+      "dispute_when": "verdict == 'fake'",
+      "rationale": "Mocked ASI verdict per NICK_SPEC §7.5; demo only."
+    },
+    {
+      "id": "shadow-mirror",
+      "kind": "informational-only",
+      "source": "agent/data/shadow-vessels.json",
+      "dispute_when": "never",
+      "rationale": "Local mirror of OpenSanctions maritime hits; cross-reference only, does not branch the decision."
+    },
+    {
+      "id": "metadata-bmt",
+      "kind": "verified-fetch",
+      "source": "tools/fetch-metadata.mjs (lib/swarm.mjs verifyAndFetch)",
+      "dispute_when": "BMT recompute mismatch is treated as untrusted — skip rather than dispute",
+      "rationale": "Per DESIGN_DOCUMENT §10.1, AI agents must recompute the BMT root locally and reject tampered gateway responses."
+    }
+  ],
+  "thresholds": {
+    "minSecondsRemaining": 15,
+    "ethGasMin":  "0.02 ETH",
+    "wethBondMin": "0.005 WETH"
+  },
+  "outputs": {
+    "onDispute": "pin reasoning JSON to Swarm and write verifier.lastDecision text record with the bzz:// reference",
+    "onSkip":    "no on-chain side effects; local seenReports increment only"
+  },
+  "limitations": [
+    "ASI verdict is fixture-keyed (no real model call) per hackathon scope",
+    "SOC verification deferred — verifier reads only immutable Swarm content for now",
+    "Soul + policy URIs are written by the verifier wallet at enrollment and re-rotated by tools/publish-identity.mjs"
+  ]
+}

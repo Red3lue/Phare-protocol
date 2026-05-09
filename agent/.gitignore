@@ -1,0 +1,5 @@
+.env
+state/wallet.json
+state/state.json
+state/decisions/
+node_modules/
