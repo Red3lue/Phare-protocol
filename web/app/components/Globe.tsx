@@ -6,6 +6,15 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { Vessel } from '../data/fleet';
 
+// Minimal structural type for the OrbitControls instance we get back from
+// drei's <OrbitControls ref={...} />. We only touch its event-emitter API,
+// so we avoid the three-stdlib type import (not hoisted in this workspace).
+type OrbitControlsImpl = {
+    addEventListener: (type: 'start' | 'change' | 'end', cb: () => void) => void;
+    removeEventListener: (type: 'start' | 'change' | 'end', cb: () => void) => void;
+    update: () => boolean;
+};
+
 const TEX_EARTH = '/earth_2048.jpg';
 
 const R = 2;
@@ -35,14 +44,6 @@ function llToVec3(lat: number, lon: number, r: number) {
         r * Math.cos(phi),
         r * Math.sin(phi) * Math.sin(theta),
     );
-}
-
-function quaternionForLatLon(lat: number, lon: number) {
-    const yaw   = -(Math.PI / 2 + (lon * Math.PI) / 180);
-    const pitch = (lat * Math.PI) / 180;
-    const yawQ   = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    const pitchQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
-    return new THREE.Quaternion().multiplyQuaternions(pitchQ, yawQ);
 }
 
 function arcPoints(a: THREE.Vector3, b: THREE.Vector3, lift = 0.6, segs = 96) {
@@ -245,11 +246,13 @@ function Ping({
     vessel,
     selected,
     onSelect,
+    dragRef,
 }: {
     index: number;
     vessel: Vessel;
     selected: boolean;
     onSelect: () => void;
+    dragRef: React.MutableRefObject<boolean>;
 }) {
     const point = useMemo(() => llToVec3(vessel.lastLL[0], vessel.lastLL[1], R + 0.01), [vessel]);
     const groupRef = useRef<THREE.Group>(null!);
@@ -289,6 +292,9 @@ function Ping({
             ref={groupRef}
             position={point}
             onClick={(e) => {
+                // Suppress selection if this pointerup followed a drag —
+                // OrbitControls already used the gesture to spin the globe.
+                if (dragRef.current) return;
                 e.stopPropagation();
                 onSelect();
             }}
@@ -393,31 +399,62 @@ function SelectedArc({ vessel }: { vessel: Vessel }) {
 }
 
 // ── Idle auto-rotate; suppressed during entrance + after first interaction ─
+// Transition state: a target spherical position for the camera, animated
+// over time. Rotating the camera (instead of the globe) keeps OrbitControls'
+// frame intact, so mouse rotation feels identical before and after a click —
+// horizontal drag = azimuth, vertical drag = polar, world-Y stays "up".
+type TransitionRef = React.MutableRefObject<{
+    active: boolean;
+    targetTheta: number;
+    targetPhi: number;
+    targetRadius: number;
+}>;
+
+const POLAR_MIN = Math.PI * 0.08;
+const POLAR_MAX = Math.PI * 0.92;
+
 function GlobeGroup({
     fleet,
     selectedImo,
     onSelect,
     interactedRef,
+    transitionRef,
+    dragRef,
+    controlsRef,
 }: {
     fleet: readonly Vessel[];
     selectedImo: number | null;
     onSelect: (imo: number) => void;
     interactedRef: React.MutableRefObject<boolean>;
+    transitionRef: TransitionRef;
+    dragRef: React.MutableRefObject<boolean>;
+    controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
 }) {
     const groupRef = useRef<THREE.Group>(null!);
-    const transitionRef = useRef<{ active: boolean; target: THREE.Quaternion }>({
-        active: false,
-        target: new THREE.Quaternion(),
-    });
+    const { camera } = useThree();
 
     useEffect(() => {
         if (selectedImo == null) return;
         const v = fleet.find((s) => s.imo === selectedImo);
         if (!v) return;
-        transitionRef.current.target.copy(quaternionForLatLon(v.lastLL[0], v.lastLL[1]));
+        if (!groupRef.current) return;
+
+        // Vessel's world-space direction (after current globe rotation). The
+        // camera will move along this direction at its current orbit radius
+        // so the ping ends up at screen center, while the globe stays in
+        // its existing frame so OrbitControls keeps "up" = world Y.
+        const local = llToVec3(v.lastLL[0], v.lastLL[1], R).normalize();
+        const world = local.clone().applyQuaternion(groupRef.current.quaternion);
+        const sph = new THREE.Spherical().setFromVector3(world);
+        sph.radius = camera.position.length();
+        sph.phi = Math.max(POLAR_MIN, Math.min(POLAR_MAX, sph.phi));
+
+        transitionRef.current.targetTheta = sph.theta;
+        transitionRef.current.targetPhi = sph.phi;
+        transitionRef.current.targetRadius = sph.radius;
         transitionRef.current.active = true;
         interactedRef.current = true;
-    }, [selectedImo, fleet, interactedRef]);
+    }, [selectedImo, fleet, interactedRef, transitionRef, camera]);
 
     const idleStartAt = PING_BASE_DELAY + fleet.length * PING_STAGGER + PING_FADE_DUR;
 
@@ -426,11 +463,27 @@ function GlobeGroup({
 
         if (transitionRef.current.active) {
             const k = 1 - Math.pow(0.0008, dt);
-            groupRef.current.quaternion.slerp(transitionRef.current.target, k);
-            const angle = groupRef.current.quaternion.angleTo(transitionRef.current.target);
-            if (angle < 0.005) {
-                groupRef.current.quaternion.copy(transitionRef.current.target);
+            const cur = new THREE.Spherical().setFromVector3(camera.position);
+            // Take the shortest azimuth path (handle the ±π wrap).
+            let dTheta = transitionRef.current.targetTheta - cur.theta;
+            while (dTheta > Math.PI) dTheta -= 2 * Math.PI;
+            while (dTheta < -Math.PI) dTheta += 2 * Math.PI;
+            cur.theta += dTheta * k;
+            cur.phi += (transitionRef.current.targetPhi - cur.phi) * k;
+            cur.radius = transitionRef.current.targetRadius;
+            camera.position.setFromSpherical(cur);
+            camera.lookAt(0, 0, 0);
+
+            const dPhi = transitionRef.current.targetPhi - cur.phi;
+            if (Math.abs(dTheta) < 0.003 && Math.abs(dPhi) < 0.003) {
+                cur.theta = transitionRef.current.targetTheta;
+                cur.phi = transitionRef.current.targetPhi;
+                camera.position.setFromSpherical(cur);
+                camera.lookAt(0, 0, 0);
                 transitionRef.current.active = false;
+                // Re-sync OrbitControls so its internal spherical matches
+                // the new camera position before the user takes over.
+                controlsRef.current?.update();
             }
             return;
         }
@@ -458,6 +511,7 @@ function GlobeGroup({
                     vessel={s}
                     selected={selectedImo === s.imo}
                     onSelect={() => onSelect(s.imo)}
+                    dragRef={dragRef}
                 />
             ))}
             {selected && <SelectedArc vessel={selected} />}
@@ -465,17 +519,50 @@ function GlobeGroup({
     );
 }
 
-function ControlsBridge({ interactedRef }: { interactedRef: React.MutableRefObject<boolean> }) {
-    const { gl } = useThree();
+function ControlsBridge({
+    controlsRef,
+    interactedRef,
+    transitionRef,
+    dragRef,
+}: {
+    controlsRef: React.MutableRefObject<OrbitControlsImpl | null>;
+    interactedRef: React.MutableRefObject<boolean>;
+    transitionRef: TransitionRef;
+    dragRef: React.MutableRefObject<boolean>;
+}) {
     useEffect(() => {
-        const stop = () => {
+        const ctl = controlsRef.current;
+        if (!ctl) return;
+        // OrbitControls fires `start` on the first pointerdown, `change` on
+        // every camera update (user input AND programmatic), and `end` on
+        // pointerup. We only flag `dragRef` while a user gesture is active
+        // (between start and end) — programmatic camera moves during the
+        // click-to-vessel transition emit `change` too and must not be
+        // confused with user drags. dragRef is preserved through the click
+        // event that follows pointerup so ping onClick handlers can suppress
+        // selection mid-drag.
+        let gestureActive = false;
+        const onStart = () => {
             interactedRef.current = true;
+            transitionRef.current.active = false;
+            dragRef.current = false;
+            gestureActive = true;
         };
-        gl.domElement.addEventListener('pointerdown', stop, { passive: true });
+        const onChange = () => {
+            if (gestureActive) dragRef.current = true;
+        };
+        const onEnd = () => {
+            gestureActive = false;
+        };
+        ctl.addEventListener('start', onStart);
+        ctl.addEventListener('change', onChange);
+        ctl.addEventListener('end', onEnd);
         return () => {
-            gl.domElement.removeEventListener('pointerdown', stop);
+            ctl.removeEventListener('start', onStart);
+            ctl.removeEventListener('change', onChange);
+            ctl.removeEventListener('end', onEnd);
         };
-    }, [gl, interactedRef]);
+    }, [controlsRef, interactedRef, transitionRef, dragRef]);
     return null;
 }
 
@@ -491,6 +578,14 @@ export default function Globe({
     paused: boolean;
 }) {
     const interactedRef = useRef(false);
+    const dragRef = useRef(false);
+    const controlsRef = useRef<OrbitControlsImpl | null>(null);
+    const transitionRef = useRef({
+        active: false,
+        targetTheta: 0,
+        targetPhi: 0,
+        targetRadius: 0,
+    });
 
     return (
         <Canvas
@@ -499,7 +594,10 @@ export default function Globe({
             frameloop={paused ? 'demand' : 'always'}
             gl={{ antialias: true, alpha: true }}
             style={{ background: 'transparent' }}
-            onPointerMissed={() => onSelect(null)}
+            onPointerMissed={() => {
+                if (dragRef.current) return;
+                onSelect(null);
+            }}
         >
             <ambientLight intensity={0.9} />
             <Suspense fallback={null}>
@@ -508,13 +606,26 @@ export default function Globe({
                     selectedImo={selectedImo}
                     onSelect={(imo) => onSelect(imo)}
                     interactedRef={interactedRef}
+                    transitionRef={transitionRef}
+                    dragRef={dragRef}
+                    controlsRef={controlsRef}
                 />
             </Suspense>
-            <ControlsBridge interactedRef={interactedRef} />
+            <ControlsBridge
+                controlsRef={controlsRef}
+                interactedRef={interactedRef}
+                transitionRef={transitionRef}
+                dragRef={dragRef}
+            />
             <OrbitControls
+                ref={controlsRef as unknown as React.Ref<never>}
                 enablePan={false}
                 enableZoom={false}
-                rotateSpeed={0.6}
+                rotateSpeed={0.45}
+                enableDamping
+                dampingFactor={0.12}
+                minPolarAngle={POLAR_MIN}
+                maxPolarAngle={POLAR_MAX}
             />
         </Canvas>
     );
