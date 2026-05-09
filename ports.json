@@ -1,0 +1,17 @@
+{
+  "_comment": "Mock destination ports for the orbital-orchestrator's inference stub. Mix of shadow-fleet-known and ordinary commercial ports.",
+  "ports": [
+    { "name": "Novorossiysk",     "country": "RU", "lat": 44.72, "lon":  37.78, "shadow_fleet_known": true  },
+    { "name": "Primorsk",         "country": "RU", "lat": 60.36, "lon":  28.61, "shadow_fleet_known": true  },
+    { "name": "Ust-Luga",         "country": "RU", "lat": 59.66, "lon":  28.41, "shadow_fleet_known": true  },
+    { "name": "Murmansk",         "country": "RU", "lat": 68.97, "lon":  33.08, "shadow_fleet_known": true  },
+    { "name": "Kaliningrad",      "country": "RU", "lat": 54.71, "lon":  20.50, "shadow_fleet_known": true  },
+    { "name": "Sikka",            "country": "IN", "lat": 22.43, "lon":  69.85, "shadow_fleet_known": true  },
+    { "name": "Visakhapatnam",    "country": "IN", "lat": 17.69, "lon":  83.31, "shadow_fleet_known": false },
+    { "name": "Ningbo-Zhoushan",  "country": "CN", "lat": 29.87, "lon": 122.20, "shadow_fleet_known": false },
+    { "name": "Qingdao",          "country": "CN", "lat": 35.91, "lon": 120.30, "shadow_fleet_known": false },
+    { "name": "Aden",             "country": "YE", "lat": 12.78, "lon":  45.04, "shadow_fleet_known": false },
+    { "name": "Sohar",            "country": "OM", "lat": 24.46, "lon":  56.74, "shadow_fleet_known": false },
+    { "name": "Tanger Med",       "country": "MA", "lat": 35.88, "lon":  -5.50, "shadow_fleet_known": true  }
+  ]
+}
