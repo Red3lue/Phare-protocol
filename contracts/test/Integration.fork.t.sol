@@ -109,7 +109,7 @@ contract IntegrationForkTest is Test {
         umaBond = oo.getMinimumBond(WETH_ADDR);
         _fundAndApprove(reporter, address(registry), uint256(PROTOCOL_BOND) + umaBond);
         vm.prank(reporter);
-        reportId = registry.submit(imo, true, bytes32(uint256(0xdeadbeef)), swarmRef);
+        reportId = registry.submit(imo, true, bytes32(uint256(0xdeadbeef)), swarmRef, "", "", "");
     }
 
     function _vesselNode(uint256 imo) internal pure returns (bytes32) {

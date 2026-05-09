@@ -16,6 +16,36 @@
       "confidence": 0.88,
       "reasoning": "YOUNG YONG — sanctioned IMO, present in shadow-vessels.json, accept."
     },
+    "9329760": {
+      "verdict": "ok",
+      "confidence": 0.93,
+      "reasoning": "EAGLE S — Cook-Islands-flagged shadow tanker; UK OFSI sanctioned, Estlink 2 cable severance suspect (Dec 2024)."
+    },
+    "9224984": {
+      "verdict": "ok",
+      "confidence": 0.86,
+      "reasoning": "YI PENG 3 — Hong-Kong-registered bulk carrier; BCS East-West cable cut investigation (Nov 2024)."
+    },
+    "9311017": {
+      "verdict": "ok",
+      "confidence": 0.84,
+      "reasoning": "NS BURGAS — Gabon flag, Russian crude STS via Novorossiysk; OFAC SDN + EU 14."
+    },
+    "9489912": {
+      "verdict": "ok",
+      "confidence": 0.82,
+      "reasoning": "TURBA — Palau flag, Iranian crude via Kharg Island loading; OFAC SDN."
+    },
+    "9266880": {
+      "verdict": "ok",
+      "confidence": 0.95,
+      "reasoning": "KAVKAZ — Cook Islands flag, repeat shadow-fleet AIS gaps in Black Sea / Bosphorus STS."
+    },
+    "9412591": {
+      "verdict": "ok",
+      "confidence": 0.83,
+      "reasoning": "NIGHT IBIS — Equatorial Guinea flag, Bab el-Mandeb / Red Sea drift; OFAC SDN."
+    },
     "9999999": {
       "verdict": "fake",
       "confidence": 0.97,

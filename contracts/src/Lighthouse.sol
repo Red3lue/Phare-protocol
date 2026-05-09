@@ -81,13 +81,16 @@ contract Lighthouse {
     // ─── Vessels ─────────────────────────────────────────────────────────
 
     /// @notice Mint `imo-<n>.vessel.phare.eth`, owned by this contract, sealed
-    ///         by CANNOT_TRANSFER. Records the IMO and the initial Swarm log
-    ///         pointer. Subsequent settlements call `recordSighting`.
-    function nameVessel(uint256 imo, string calldata swarmRef)
-        external
-        onlyRegistry
-        returns (bytes32 node)
-    {
+    ///         by CANNOT_TRANSFER. Records IMO + initial Swarm log pointer +
+    ///         the trio of vessel descriptors (country, cargo, lastSeen).
+    ///         Subsequent settlements call `recordSighting`.
+    function nameVessel(
+        uint256 imo,
+        string calldata swarmRef,
+        string calldata country,
+        string calldata cargo,
+        string calldata lastSeen
+    ) external onlyRegistry returns (bytes32 node) {
         string memory label = _vesselLabel(imo);
         node = nameWrapper.setSubnodeRecord(
             vesselParent,
@@ -98,22 +101,32 @@ contract Lighthouse {
             FUSES_VESSEL,
             MAX_EXPIRY
         );
-        resolver.setText(node, "vessel.imo", _toString(imo));
+        resolver.setText(node, "vessel.imo",      _toString(imo));
         resolver.setText(node, "vessel.swarm.log", swarmRef);
+        resolver.setText(node, "vessel.country",   country);
+        resolver.setText(node, "vessel.cargo",     cargo);
+        resolver.setText(node, "vessel.lastSeen",  lastSeen);
         emit VesselNamed(imo, node, string.concat(label, ".vessel.phare.eth"));
     }
 
     /// @notice Update vessel records after a subsequent upheld settlement.
+    ///         Refreshes all four mutable fields plus the sighting counters.
     function recordSighting(
         uint256 imo,
         string calldata swarmRef,
         uint32 sightings,
-        uint32 disputed
+        uint32 disputed,
+        string calldata country,
+        string calldata cargo,
+        string calldata lastSeen
     ) external onlyRegistry {
         bytes32 node = _vesselNode(imo);
-        resolver.setText(node, "vessel.swarm.log", swarmRef);
+        resolver.setText(node, "vessel.swarm.log",          swarmRef);
         resolver.setText(node, "vessel.sightings.count",    _toString(sightings));
         resolver.setText(node, "vessel.sightings.disputed", _toString(disputed));
+        resolver.setText(node, "vessel.country",            country);
+        resolver.setText(node, "vessel.cargo",              cargo);
+        resolver.setText(node, "vessel.lastSeen",           lastSeen);
         emit VesselSighted(imo, node, sightings, disputed);
     }
 

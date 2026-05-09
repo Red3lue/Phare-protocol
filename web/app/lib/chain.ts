@@ -103,6 +103,9 @@ export type VesselRow = {
     swarmLog:           string;          // bzz://… dossier ref
     sightings:          number;
     disputed:           number;
+    country:            string;          // origin / flag-of-convenience hint
+    cargo:              string;          // free-form cargo description
+    lastSeen:           string;          // "lat,lon" snapshot
     orbitalImage:       string;          // bzz://… or '' if none
     orbitalImageHash:   string;
     orbitalTeePred:     string;
@@ -144,6 +147,9 @@ export async function fetchVessels(): Promise<VesselRow[]> {
                 swarmLog,
                 sightings,
                 disputed,
+                country,
+                cargo,
+                lastSeen,
                 orbitalImage,
                 orbitalImageHash,
                 orbitalTeePred,
@@ -151,6 +157,9 @@ export async function fetchVessels(): Promise<VesselRow[]> {
                 publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.swarm.log'] }),
                 publicClient.readContract({ address: REGISTRY, abi: registryAbi, functionName: 'sightingsByImo', args: [v.imo] }),
                 publicClient.readContract({ address: REGISTRY, abi: registryAbi, functionName: 'disputedByImo',  args: [v.imo] }),
+                publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.country'] }),
+                publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.cargo'] }),
+                publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.lastSeen'] }),
                 publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.orbital.image'] }),
                 publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.orbital.imageHash'] }),
                 publicClient.readContract({ address: RESOLVER, abi: resolverAbi, functionName: 'text', args: [node, 'vessel.orbital.tee.prediction'] }),
@@ -163,6 +172,9 @@ export async function fetchVessels(): Promise<VesselRow[]> {
                 swarmLog:          String(swarmLog),
                 sightings:         Number(sightings),
                 disputed:          Number(disputed),
+                country:           String(country),
+                cargo:             String(cargo),
+                lastSeen:          String(lastSeen),
                 orbitalImage:      String(orbitalImage),
                 orbitalImageHash:  String(orbitalImageHash),
                 orbitalTeePred:    String(orbitalTeePred),

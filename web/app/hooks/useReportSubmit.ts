@@ -7,6 +7,7 @@ import {
     custom,
     http,
     parseAbi,
+    parseEventLogs,
     keccak256,
     formatEther,
     parseEther,
@@ -25,8 +26,10 @@ const SWARM_BEE_URL    = process.env.NEXT_PUBLIC_SWARM_BEE_URL ?? 'https://bzz.l
 const DEMO_GPS: [number, number] = [34.7, 33.4];
 
 const REGISTRY_ABI = parseAbi([
-    'function submit(uint256 imo, bool aisDark, bytes32 photoHash, string metadataSwarm) returns (bytes32)',
+    'function submit(uint256 imo, bool aisDark, bytes32 photoHash, string metadataSwarm, string country, string cargo, string lastSeen) returns (bytes32)',
     'function protocolBond() view returns (uint96)',
+    'function liveness() view returns (uint64)',
+    'event Submitted(bytes32 indexed reportId, address indexed reporter, uint256 indexed imo, bool aisDark, bytes32 photoHash, string metadataSwarm, bytes32 assertionId, uint96 bond, uint96 umaBond, string country, string cargo, string lastSeen)',
 ]);
 
 const ERC20_ABI = parseAbi([
@@ -41,6 +44,7 @@ const WETH9_ABI = parseAbi([
 
 const OOV3_ABI = parseAbi([
     'function getMinimumBond(address currency) view returns (uint256)',
+    'function settleAssertion(bytes32 assertionId) external',
 ]);
 
 declare global {
@@ -76,6 +80,71 @@ export type Result = {
     txHash:        Hex | '';
     reportId:      Hex | '';
 };
+
+// Wait for the UMA OOv3 liveness window to expire (read from
+// ReportRegistry.liveness()) plus a small buffer for chain-clock drift,
+// then call OOv3.settleAssertion(assertionId). Truthful settle inside
+// ReportRegistry.assertionResolvedCallback fires Lighthouse.nameVessel
+// (or recordSighting on subsequent settlements). Without this step the
+// vessel never appears in the table.
+//
+// Uses the reporter's own wallet — settle is permissionless and the
+// gas is tiny (~50k). Caller pays no extra bond.
+async function autoSettleAfterLiveness({
+    publicClient,
+    walletClient,
+    account,
+    reportId,
+    assertionId,
+    setStep,
+}: {
+    publicClient: ReturnType<typeof createPublicClient>;
+    walletClient: ReturnType<typeof createWalletClient>;
+    account:      Address;
+    reportId:     Hex;
+    assertionId:  Hex;
+    setStep:      (id: 1 | 2 | 3 | 4 | 5, patch: Partial<Step>) => void;
+}) {
+    if (!OOV3_ADDRESS) {
+        setStep(5, { status: 'done', log: `${reportId.slice(0, 14)}… (oo3 missing — manual settle)` });
+        return;
+    }
+    const liveness = (await publicClient.readContract({
+        address:      REGISTRY_ADDRESS,
+        abi:          REGISTRY_ABI,
+        functionName: 'liveness',
+    })) as bigint;
+
+    const waitMs = Number(liveness) * 1_000 + 7_000; // 7 s buffer for drift
+    setStep(5, {
+        status: 'active',
+        log:    `liveness ${liveness}s — auto-settle in ${Math.ceil(waitMs / 1000)}s`,
+    });
+    await new Promise((r) => setTimeout(r, waitMs));
+
+    setStep(5, { status: 'active', log: 'sending settleAssertion…' });
+    try {
+        const settleHash = await walletClient.writeContract({
+            chain:        sepolia,
+            account,
+            address:      OOV3_ADDRESS,
+            abi:          OOV3_ABI,
+            functionName: 'settleAssertion',
+            args:         [assertionId],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: settleHash });
+        setStep(5, {
+            status: 'done',
+            log:    `${reportId.slice(0, 14)}… settled · ${settleHash.slice(0, 10)}…`,
+        });
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setStep(5, {
+            status: 'error',
+            log:    `auto-settle failed (${msg.slice(0, 80)}…) — settle manually`,
+        });
+    }
+}
 
 export function useReportSubmit() {
     // form state
@@ -248,22 +317,40 @@ export function useReportSubmit() {
                     address: REGISTRY_ADDRESS,
                     abi: REGISTRY_ABI,
                     functionName: 'submit',
-                    args: [BigInt(imo), aisDark, photoHash, result.metadataSwarm],
+                    args: [
+                        BigInt(imo), aisDark, photoHash, result.metadataSwarm,
+                        // PWA-side mocks for the demo; real reporter UI would
+                        // collect these. Country/cargo are placeholders;
+                        // lastSeen mirrors DEMO_GPS so the on-chain text
+                        // record matches the metadata.gps field.
+                        '', '', `${DEMO_GPS[0]},${DEMO_GPS[1]}`,
+                    ],
                 });
                 setResult((r) => ({ ...r, txHash }));
                 setStep(4, { status: 'done', log: txHash.slice(0, 14) + '…' });
 
-                // step 5 — wait
+                // step 5 — receipt + auto-settle after liveness expires
                 setStep(5, { status: 'active', log: 'awaiting receipt…' });
                 const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-                const submittedLog = receipt.logs.find(
-                    (l) => l.address.toLowerCase() === REGISTRY_ADDRESS.toLowerCase(),
-                );
-                const reportId = (submittedLog?.topics[1] ?? '') as Hex;
+                const submittedEvents = parseEventLogs({
+                    abi: REGISTRY_ABI,
+                    eventName: 'Submitted',
+                    logs: receipt.logs,
+                });
+                const submittedArgs = submittedEvents[0]?.args as
+                    | { reportId: Hex; assertionId: Hex }
+                    | undefined;
+                const reportId    = submittedArgs?.reportId ?? '0x' as Hex;
+                const assertionId = submittedArgs?.assertionId ?? '0x' as Hex;
                 setResult((r) => ({ ...r, reportId }));
-                setStep(5, {
-                    status: 'done',
-                    log: reportId ? reportId.slice(0, 14) + '…' : 'mined',
+
+                await autoSettleAfterLiveness({
+                    publicClient,
+                    walletClient,
+                    account: acct,
+                    reportId,
+                    assertionId,
+                    setStep,
                 });
 
                 setModalState('done');
@@ -446,21 +533,35 @@ export function useReportSubmit() {
                     address: REGISTRY_ADDRESS,
                     abi: REGISTRY_ABI,
                     functionName: 'submit',
-                    args: [BigInt(imo), aisDark, ph, metaBzz],
+                    args: [
+                        BigInt(imo), aisDark, ph, metaBzz,
+                        '', '', `${DEMO_GPS[0]},${DEMO_GPS[1]}`,
+                    ],
                 });
                 setResult((r) => ({ ...r, txHash }));
                 setStep(4, { status: 'done', log: txHash.slice(0, 14) + '…' });
 
                 setStep(5, { status: 'active', log: 'awaiting receipt…' });
                 const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-                const submittedLog = receipt.logs.find(
-                    (l) => l.address.toLowerCase() === REGISTRY_ADDRESS.toLowerCase(),
-                );
-                const reportId = (submittedLog?.topics[1] ?? '') as Hex;
+                const submittedEvents = parseEventLogs({
+                    abi: REGISTRY_ABI,
+                    eventName: 'Submitted',
+                    logs: receipt.logs,
+                });
+                const submittedArgs = submittedEvents[0]?.args as
+                    | { reportId: Hex; assertionId: Hex }
+                    | undefined;
+                const reportId    = submittedArgs?.reportId ?? '0x' as Hex;
+                const assertionId = submittedArgs?.assertionId ?? '0x' as Hex;
                 setResult((r) => ({ ...r, reportId }));
-                setStep(5, {
-                    status: 'done',
-                    log: reportId ? reportId.slice(0, 14) + '…' : 'mined',
+
+                await autoSettleAfterLiveness({
+                    publicClient,
+                    walletClient,
+                    account: acct,
+                    reportId,
+                    assertionId,
+                    setStep,
                 });
                 setModalState('done');
             } catch (e) {
