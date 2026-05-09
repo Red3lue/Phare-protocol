@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+interface IERC1155Receiver {
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes4);
+}
+
 /// @notice Minimal NameWrapper mock that mirrors the ownership / fuses /
 ///         resolver state Lighthouse touches. Authorization is intentionally
 ///         lax (no operator-approval enforcement) — tests assert behaviour at
@@ -53,6 +63,10 @@ contract MockNameWrapper {
             expiry:   expiry,
             exists:   true
         });
+        // Mirror real NameWrapper: ERC1155 _safeMint invokes the receiver
+        // hook on contract recipients. This is what catches the
+        // "Lighthouse forgot onERC1155Received" bug at unit-test time.
+        _safeMintHook(owner, uint256(node));
         emit SubnodeRecord(parentNode, label, node, owner, resolver, fuses);
     }
 
@@ -66,10 +80,33 @@ contract MockNameWrapper {
         node = _node(parentNode, label);
         Node storage n = _nodes[node];
         require(n.exists, "MockNameWrapper: node does not exist");
+        address prev = n.owner;
         n.owner  = owner;
         n.fuses  = fuses;
         n.expiry = expiry;
+        // Real NameWrapper does a safeTransferFrom on owner change; if the
+        // new owner is a contract, the receiver hook runs.
+        if (owner != prev) _safeMintHook(owner, uint256(node));
         emit SubnodeOwner(parentNode, label, node, owner, fuses);
+    }
+
+    /// @dev Calls `onERC1155Received` on contract recipients, reverting if
+    ///      the recipient doesn't implement the receiver interface — same
+    ///      shape as OpenZeppelin's ERC-1155 `_doSafeTransferAcceptanceCheck`.
+    function _safeMintHook(address to, uint256 id) internal {
+        if (to.code.length == 0) return;
+        try IERC1155Receiver(to).onERC1155Received(msg.sender, address(0), id, 1, "")
+            returns (bytes4 retval)
+        {
+            require(
+                retval == IERC1155Receiver.onERC1155Received.selector,
+                "MockNameWrapper: receiver returned wrong selector"
+            );
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch {
+            revert("MockNameWrapper: ERC1155 transfer to non-receiver");
+        }
     }
 
     function ownerOf(uint256 id) external view returns (address) {

@@ -13,7 +13,8 @@ fs_permissions = [
     {access = "read-write", path = "../web/.env"},
     {access = "read-write", path = "../web/.env.example"},
     {access = "read-write", path = "../.env"},
-    {access = "read-write", path = "../.env.example"}
+    {access = "read-write", path = "../.env.example"},
+    {access = "read-write", path = "./.vessel-state.json"}
 ]
 
 [rpc_endpoints]

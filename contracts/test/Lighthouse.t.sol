@@ -274,6 +274,20 @@ contract LighthouseTest is Test {
         resolver.setText(node, "verifier.policy", "bzz://hijack");
     }
 
+    // ─── ERC-1155 receiver compliance (regression for the missing hook) ──
+
+    function test_OnERC1155Received_ReturnsMagicSelector() public view {
+        bytes4 expected = bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"));
+        bytes4 got = lighthouse.onERC1155Received(address(0), address(0), 0, 0, "");
+        assertEq(got, expected, "must return ERC-1155 receiver magic value");
+    }
+
+    function test_SupportsInterface_ERC165AndReceiver() public view {
+        assertTrue(lighthouse.supportsInterface(0x01ffc9a7), "ERC-165");
+        assertTrue(lighthouse.supportsInterface(0x4e2312e0), "ERC-1155 Receiver");
+        assertFalse(lighthouse.supportsInterface(0xdeadbeef), "unknown");
+    }
+
     // ─── Events ──────────────────────────────────────────────────────────
 
     function test_Events_VesselNamedEmitted() public {

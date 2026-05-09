@@ -174,6 +174,39 @@ contract Lighthouse {
         emit VerifierEnrolled(msg.sender, handle, node);
     }
 
+    // ─── ERC1155 receiver (NameWrapper mints wrapped names as ERC1155) ───
+
+    /// @dev NameWrapper's `setSubnodeRecord` does a `_safeMint` of the wrapped
+    ///      ERC-1155 token to `owner`. When `owner == address(this)` (vessel
+    ///      mint, and step 1 of verifier enrollment) the safe-transfer hook
+    ///      runs and the call reverts unless we accept it. We accept any
+    ///      ERC-1155 — the only legitimate caller in our flows is NameWrapper.
+    function onERC1155Received(address, address, uint256, uint256, bytes calldata)
+        external
+        pure
+        returns (bytes4)
+    {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    /// @dev ERC-165 introspection. NameWrapper queries this before invoking
+    ///      `onERC1155Received` in some paths.
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return
+            interfaceId == 0x01ffc9a7 || // ERC-165
+            interfaceId == 0x4e2312e0;   // ERC-1155 Receiver
+    }
+
     // ─── Internals ───────────────────────────────────────────────────────
 
     function _vesselLabel(uint256 imo) internal pure returns (string memory) {

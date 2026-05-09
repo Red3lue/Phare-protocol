@@ -151,6 +151,14 @@ contract Deploy is Script {
     // ─── Verify ──────────────────────────────────────────────────────────
 
     function _verify(Out memory o, Cfg memory c) internal view {
+        // External addresses must actually have code — caught one bug where
+        // .env had mainnet's UMA OOv3 on Sepolia, deployment "succeeded", but
+        // every assertTruth/settleAssertion would have reverted.
+        require(c.bondCurrency.code.length > 0, "VERIFY: bondCurrency has no code on this chain");
+        require(c.oo.code.length          > 0, "VERIFY: UMA OOv3 has no code on this chain");
+        require(c.nameWrapper.code.length > 0, "VERIFY: NameWrapper has no code on this chain");
+        require(c.resolver.code.length    > 0, "VERIFY: PublicResolver has no code on this chain");
+
         require(address(o.registry.lighthouse()) == address(o.lighthouse), "VERIFY: registry.lighthouse");
         require(o.lighthouse.reportRegistry()    == address(o.registry),   "VERIFY: lighthouse.reportRegistry");
         require(o.lighthouse.vesselParent()      == c.vesselParent,        "VERIFY: vesselParent");
