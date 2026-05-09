@@ -1,0 +1,14 @@
+{
+  "name": "orbitalImager-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "description": "JS client SDK for the orbitalimager Orbitport plugin (DESIGN_DOCUMENT §4.6).",
+  "scripts": {
+    "fetch-imagery": "node src/fetch-imagery.mjs"
+  }
+}

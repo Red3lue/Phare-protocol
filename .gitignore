@@ -40,3 +40,9 @@ Thumbs.db
 
 # Skill runtime state (per NICK_SPEC §13)
 skill/state/
+
+# orbitalImager-sdk runtime state (resumable session dirs, fetched images)
+orbitalImager-sdk/state/
+
+# Forked Orbitport repo — tracked separately as Red3lue/orbitport
+orbitport/

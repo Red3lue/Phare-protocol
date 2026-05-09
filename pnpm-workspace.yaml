@@ -3,7 +3,7 @@ packages:
   - "skill"
   - "suggester"
   - "minter"
-  - "orbital"
+  - "orbitalImager-sdk"
   - "orbital-plugin"
   - "swarm"
   - "contracts"
