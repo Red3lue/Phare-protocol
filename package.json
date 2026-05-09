@@ -13,6 +13,8 @@
     "test": "pnpm -r --if-present test",
     "lint": "pnpm -r --if-present lint",
     "contracts:build": "pnpm --filter contracts build",
-    "contracts:test": "pnpm --filter contracts test"
+    "contracts:test": "pnpm --filter contracts test",
+    "contracts:deploy": "pnpm --filter contracts run deploy",
+    "contracts:wrap": "pnpm --filter contracts run wrap"
   }
 }
