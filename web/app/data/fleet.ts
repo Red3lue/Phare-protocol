@@ -2,13 +2,25 @@
 //
 // Names + IMOs for PABLO and YOUNG YONG are pinned in DESIGN_DOCUMENT §14.4 as
 // the canonical OSINT-verified hackathon fixtures (OpenSanctions `maritime`).
-// The remaining four (TURBA, NS BURGAS, KAVKAZ, NIGHT IBIS) are illustrative —
-// inherited from web/hackathon-UI-helpers/app/shadow/page.tsx, which itself
+// EAGLE S and YI PENG 3 are added as Denmark / Baltic sightings — both
+// extensively reported in international press:
+//   • EAGLE S (IMO 9329760) — Cook-Islands-flagged shadow tanker; transited
+//     Danish straits late Dec 2024, detained by Finland 2024-12-26 for the
+//     Estlink 2 cable severance; subsequently sanctioned by UK OFSI.
+//   • YI PENG 3 (IMO 9224984) — Hong-Kong-registered bulk carrier; anchored
+//     in the Kattegat (between Denmark and Sweden) for ~30 days from
+//     2024-11-19 while investigators probed the C-Lion1 / BCS East-West
+//     subsea cable cuts.
+//
+// The remaining four (NS BURGAS, TURBA, KAVKAZ, NIGHT IBIS) are illustrative
+// — inherited from web/hackathon-UI-helpers/app/shadow/page.tsx, which itself
 // flags them as "illustrative, not real OFAC entries". Replace with verified
 // OpenSanctions hits before any non-demo use.
 //
 // All lat/lon, AIS gap, cargo, owner cycle and flag-swap counts are demo
-// fabrications, sized to look believable for a 3-minute demo.
+// fabrications, sized to look believable for a 3-minute demo (with the
+// exception of the two Baltic entries above, whose coordinates and dates
+// match real reporting).
 
 export type Vessel = {
     imo:           number;
@@ -48,6 +60,26 @@ export const FLEET: readonly Vessel[] = [
         cargo: 'Diesel · est. 320k bbl', lastAisAt: '2026-04-26 18:02Z',
         flagsSwapped: 4, owners: 7, sanctions: ['OFAC SDN'],
         sightings: 2, disputed: 1, color: '#1ed1c5', verified: 'pinned',
+    },
+    {
+        imo: 9329760, name: 'EAGLE S', flag: 'COOK ISLANDS', age: 18, riskScore: 96,
+        aisGap: '02d 14h', lastSeen: 'Skagerrak · off Skagen',
+        lastLL: [57.7, 10.6], suspectedLL: [59.9, 24.5],
+        suspected: 'Estlink 2 cable severance',
+        cargo: 'Crude · est. 35k DWT',
+        lastAisAt: '2024-12-25 04:00Z',
+        flagsSwapped: 3, owners: 5, sanctions: ['UK OFSI', 'EU 14'],
+        sightings: 4, disputed: 0, color: '#1ed1c5', verified: 'pinned',
+    },
+    {
+        imo: 9224984, name: 'YI PENG 3', flag: 'HONG KONG · CN', age: 23, riskScore: 89,
+        aisGap: '30d 04h', lastSeen: 'Kattegat anchorage',
+        lastLL: [56.7, 11.1], suspectedLL: [54.8, 13.5],
+        suspected: 'BCS East–West cable cut',
+        cargo: 'Bulk · est. 75k DWT',
+        lastAisAt: '2024-11-19 21:14Z',
+        flagsSwapped: 1, owners: 2, sanctions: ['UNDER INVESTIGATION'],
+        sightings: 3, disputed: 1, color: '#1ed1c5', verified: 'pinned',
     },
     {
         imo: 9311017, name: 'NS BURGAS', flag: 'GABON', age: 19, riskScore: 88,

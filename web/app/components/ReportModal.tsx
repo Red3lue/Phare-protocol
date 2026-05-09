@@ -8,9 +8,9 @@ import { useReportSubmit, type Step } from '../hooks/useReportSubmit';
 import { swarmUrl } from '../data/fleet';
 
 function StepRow({ step }: { step: Step }) {
-    const { id, label, status, log } = step;
+    const { id, label, status } = step;
     return (
-        <div className="divider px-5 py-2.5 last:border-b-0">
+        <div className="divider px-5 py-3 last:border-b-0">
             <div className="flex items-center gap-3">
                 <span
                     className={clsx(
@@ -41,11 +41,6 @@ function StepRow({ step }: { step: Step }) {
                     {status}
                 </span>
             </div>
-            {log && (
-                <div className="mt-1 pl-7 font-mono text-[11px] text-ink/55 tabular truncate">
-                    {log}
-                </div>
-            )}
         </div>
     );
 }
@@ -119,7 +114,7 @@ export default function ReportModal({
                                         type="number"
                                         value={r.imo}
                                         onChange={(e) => r.setImo(e.target.value)}
-                                        className="rounded-xl glass-soft edge w-full px-4 py-2.5 font-mono text-[13px] text-ink tabular outline-none focus:turq-glow-soft"
+                                        className="rounded-xl bg-bone edge w-full px-4 py-2.5 font-mono text-[13px] text-ink tabular outline-none focus:turq-glow-soft"
                                     />
                                 </div>
 
@@ -148,16 +143,16 @@ export default function ReportModal({
                                             if (f) await r.ingestFile(f);
                                         }}
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="rounded-xl glass-soft edge px-4 py-7 text-center cursor-pointer hover:bg-turq-50/50 transition-colors"
+                                        className="rounded-xl bg-bone edge px-4 py-7 text-center cursor-pointer hover:bg-turq-50/50 transition-colors"
                                     >
                                         {r.photoName ? (
-                                            <div>
-                                                <div className="font-mono text-[12px] text-ink">
-                                                    {r.photoName}
-                                                </div>
-                                                <div className="mt-1 font-mono text-[10px] text-ink/55 tabular truncate">
-                                                    {r.photoHash}
-                                                </div>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-turq-500 text-bone text-[10px]">
+                                                    ✓
+                                                </span>
+                                                <span className="font-mono text-[12px] text-ink">
+                                                    photo uploaded
+                                                </span>
                                             </div>
                                         ) : (
                                             <div className="font-mono text-[12px] text-ink/55">
@@ -183,15 +178,12 @@ export default function ReportModal({
                                     </div>
                                 )}
 
-                                <div className="flex items-center justify-between divider-t pt-3">
-                                    <span className="label">
-                                        bond ≈ 0.012 weth · sepolia
-                                    </span>
+                                <div className="divider-t pt-4 flex flex-col items-center gap-2">
                                     <button
                                         onClick={() => r.submit()}
                                         disabled={!r.photoHash}
                                         className={clsx(
-                                            'rounded-full px-6 py-2 font-mono text-[11px] uppercase tracking-[0.22em] transition-all',
+                                            'rounded-full px-8 py-2.5 font-mono text-[11px] uppercase tracking-[0.22em] transition-all',
                                             r.photoHash
                                                 ? 'bg-ink/90 text-bone hover:bg-turq-700 hover:turq-glow'
                                                 : 'bg-ink/10 text-ink/30 cursor-not-allowed',
@@ -199,6 +191,7 @@ export default function ReportModal({
                                     >
                                         ▲ submit
                                     </button>
+                                    <span className="label">bond ≈ 0.012 weth · sepolia</span>
                                 </div>
                             </div>
                         )}
@@ -277,7 +270,11 @@ export default function ReportModal({
                                 <div className="space-y-2 font-mono text-[11px]">
                                     <div className="flex items-baseline justify-between gap-3 divider pb-2">
                                         <span className="label">report id</span>
-                                        <span className="text-ink tabular truncate">{r.result.reportId || '—'}</span>
+                                        <span className="text-ink tabular truncate">
+                                            {r.result.reportId
+                                                ? `${r.result.reportId.slice(0, 10)}…${r.result.reportId.slice(-4)}`
+                                                : '—'}
+                                        </span>
                                     </div>
                                     <div className="flex items-baseline justify-between gap-3 divider pb-2">
                                         <span className="label">tx hash</span>

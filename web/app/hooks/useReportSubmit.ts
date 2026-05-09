@@ -340,8 +340,14 @@ export function useReportSubmit() {
             setResult((r) => ({ ...r, photoSwarm: photoBzz, metadataSwarm: metaBzz }));
             setStep(1, { status: 'done', log: `${photoBzz.slice(0, 14)}… · ${metaBzz.slice(0, 14)}…` });
 
-            // step 2 — wallet
+            // step 2 — wallet (force account picker so imported accounts are
+            // selectable; eth_requestAccounts on its own silently returns the
+            // currently-active MetaMask account).
             setStep(2, { status: 'active', log: 'requesting accounts…' });
+            await window.ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }],
+            });
             const walletClient = createWalletClient({
                 chain: sepolia,
                 transport: custom(window.ethereum),
@@ -476,6 +482,10 @@ export function useReportSubmit() {
                 setError('no injected wallet (install MetaMask)');
                 return null;
             }
+            await window.ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }],
+            });
             const walletClient = createWalletClient({
                 chain: sepolia,
                 transport: custom(window.ethereum),

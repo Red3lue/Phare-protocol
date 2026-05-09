@@ -73,6 +73,14 @@ export default function HomePage() {
             return;
         }
         try {
+            // Force the MetaMask account picker so the user can choose between
+            // their default account and any imported ones (e.g. "praga").
+            // wallet_requestPermissions always re-prompts; eth_requestAccounts
+            // alone would silently return whatever MetaMask was last set to.
+            await window.ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }],
+            });
             const walletClient = createWalletClient({
                 chain: sepolia,
                 transport: custom(window.ethereum),
