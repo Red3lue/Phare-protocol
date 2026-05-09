@@ -1,0 +1,12 @@
+{
+    "name": "contracts",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Phare on-chain layer — ReportRegistry, SlashPool",
+    "scripts": {
+        "build": "forge build",
+        "test": "forge test",
+        "deploy": "bash -c 'set -a; . ../.env; set +a; forge script script/Deploy.s.sol:Deploy --rpc-url sepolia --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY'",
+        "wrap": "bash -c 'set -a; . ../.env; set +a; cast send $BOND_CURRENCY \"deposit()\" --value ${WRAP_AMOUNT:-0.01ether} --private-key $DEPLOYER_PRIVATE_KEY --rpc-url sepolia'"
+    }
+}

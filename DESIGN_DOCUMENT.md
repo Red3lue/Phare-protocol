@@ -48,23 +48,17 @@ The result is a credibly neutral, citizen-funded sighting log that journalists, 
 - **UMA OOv3** — the specific optimistic oracle implementation we use.
 - **Liveness window** — challenge window before auto-settlement. 30s–1 min for demo, 6h+ in production.
 
-### 2.3 Hardware and identity
-
-- **Passkey** — a private key resident in a phone or laptop's secure hardware (Apple Secure Enclave, Android StrongBox, Windows TPM). Never leaves the chip.
-- **WebAuthn** — the web standard that lets a browser ask the device to sign a challenge with a passkey.
-
-### 2.4 Roles
+### 2.3 Roles
 
 - **Verifier** *(formerly "sentinel agent" / "disputer" / "selector")* — the actor that watches the report stream, judges credibility, and races to dispute fakes via UMA. The rename trail is documented in `ENS_SPEC.md` §1; "verifier" is canonical from this point forward. All references to `disputer.phare.eth` or `agent.stats.*` in earlier docs are read as `verifier.phare.eth` and `verifier.stats.*`.
 
-### 2.5 Dependencies
+### 2.4 Dependencies
 
 - **Swarm** — decentralised, content-addressed storage. Files identified by `bzz://<hash>`.
 - **NameStone** — service that issues ENS subnames off-chain via CCIP-Read; gas-free per mint.
 - **OpenClaw** — autonomous-agent runtime; local-first agents driven by a heartbeat tick.
 - **ClawHub** — public registry where OpenClaw skills are published and installed.
 - **SpaceComputer / Orbitport** — orbital-services platform; we use their KMS, cTRNG, and Application Plugin layer.
-- **Daimo p256-verifier** — on-chain verifier for the secp256r1 curve used by WebAuthn passkeys; falls back to RIP-7212 precompile.
 
 ---
 
@@ -72,7 +66,7 @@ The result is a credibly neutral, citizen-funded sighting log that journalists, 
 
 | Actor | Role | Onboarding requirements |
 |---|---|---|
-| **Reporter** | Photographs vessels, submits sightings, posts a $5 USDC bond | Phone or laptop, an EOA funded with gas + bond, a passkey on the device |
+| **Reporter** | Photographs vessels, submits sightings, posts a $5-equivalent bond (WETH on Sepolia, USDC on mainnet — see §14.4) | Phone or laptop, an EOA funded with gas + bond |
 | **Verifier** | Watches the report stream, runs cheap credibility checks, posts a counter-bond to dispute fakes | OpenClaw runtime (or a self-hosted variant), a self-generated EOA, a registered ENS subname under `verifier.phare.eth` |
 | **Consumer** *(out of hackathon build scope)* | Reads the registry — journalists, NGOs, insurers, enforcement bodies, P&I clubs | A browser; ENS resolver |
 | **Project team** | Operates the shared off-chain services (suggester, minter, orbital orchestrator) | Hosted infrastructure, NameStone keys, Orbitport credentials |
@@ -116,13 +110,12 @@ A progressive web app that runs on phones and laptops. Responsibilities:
 1. Acquire camera and GPS permissions.
 2. Query the suggester service with the user's coordinates and present any AIS-broadcasting vessels for selection. If the list is empty (the AIS-dark case), present a manual IMO-entry field and an "AIS-dark — visible from my position" checkbox.
 3. Capture a photo, recompress client-side to roughly 500 KB JPEG.
-4. Pull a fresh nonce from SpaceComputer cTRNG (real, not mocked).
-5. Hash the tuple `(photo_hash, gps, timestamp, imo, ais_dark_flag, nonce)` and request a WebAuthn signature from the device's secure hardware.
-6. Upload the photo and the metadata JSON to Swarm; receive two `bzz://` references.
-7. Submit `ReportRegistry.submit()` from the user's EOA, escrowing a $5 USDC bond.
-8. Display the 30s–1m liveness countdown, the live event stream, the eventual settlement, and — when present — the orbital corroboration badge and inferred destination.
+4. Pull a fresh nonce from SpaceComputer cTRNG (real, not mocked) and embed it in the metadata.
+5. Upload the photo and the metadata JSON to Swarm; receive two `bzz://` references.
+6. Submit `ReportRegistry.submit()` from the user's EOA, escrowing the $5-equivalent bond (WETH on Sepolia per §14.4).
+7. Display the 30s–1m liveness countdown, the live event stream, the eventual settlement, and — when present — the orbital corroboration badge and inferred destination.
 
-The PWA never holds the user's identity beyond what they choose to surface. Each report can rotate the EOA. The passkey is reusable but bound to a single device.
+The PWA never holds the user's identity beyond what they choose to surface. Each report can rotate the EOA. Authorship of a report is bound to whichever EOA submitted it on-chain; cryptographic device-binding (passkeys / WebAuthn / secp256r1 verifier) was considered and dropped — bonded skin-in-the-game, not hardware attestation, is the trust model.
 
 ### 4.4 Verifier — `skill/` + `contracts/EnsRegistrar.sol`
 
@@ -147,7 +140,7 @@ In `running`, on every tick the skill:
 4. Fetches the metadata JSON via the **Swarm MCP server** (download path), recomputing the hash.
 5. Cross-references the IMO against a local shadow-vessel registry (informational only — does not branch the decision).
 6. Consults a mocked ASI verdict tool, keyed by IMO with a default fallback (coordinates are passed in as inputs but do not drive the lookup).
-7. If the verdict is `fake`, checks the liveness window and the verifier's USDC balance, ensures UMA has the required approval, builds a reasoning JSON, pins it to Swarm, calls `disputeAssertion` with a counter-bond, and writes the resulting `bzz://` reference into the verifier's `verifier.lastDecision` ENS text record.
+7. If the verdict is `fake`, checks the liveness window and the verifier's bond-currency balance, ensures UMA has the required approval, builds a reasoning JSON, pins it to Swarm, calls `disputeAssertion` with a counter-bond, and writes the resulting `bzz://` reference into the verifier's `verifier.lastDecision` ENS text record.
 8. If the verdict is `ok`, records a local-only skip — no Swarm upload, no ENS write.
 
 A dedicated Solidity contract, `EnsRegistrar`, mediates the on-chain mint of each verifier subname. It is operator-approved by the parent name's owner during pre-event setup; afterwards, any wallet can self-register a subname. The fuse `PARENT_CANNOT_CONTROL` is burned on each child to emancipate the agent's identity from the parent.
@@ -160,7 +153,7 @@ Two main contracts plus the verifier registrar.
 
 | Contract | Responsibility |
 |---|---|
-| **`ReportRegistry`** | Stores reports keyed by report ID; escrows bonds; verifies WebAuthn signatures via Daimo p256-verifier (or RIP-7212); opens UMA OOv3 assertions; receives UMA settlement and dispute callbacks; verifies orbital attestations via `ECDSA.recover`; distributes payouts and slash shares. Immutable, no proxies, no governance. |
+| **`ReportRegistry`** | Stores reports keyed by report ID; escrows bonds; opens UMA OOv3 assertions; receives UMA settlement and dispute callbacks; verifies orbital attestations via `ECDSA.recover`; distributes payouts and slash shares. Immutable, no proxies, no governance. |
 | **`SlashPool`** | Holds slashed-bond shares and donor seed funds; pays small per-settlement rewards to honest reporters; cannot be drained without a registered call from `ReportRegistry`. |
 | **`EnsRegistrar`** | Programmatic mint of `<handle>.verifier.phare.eth` subnames via the ENS Name Wrapper, sets the verifier's three initial text records (`verifier.policy`, `verifier.soul`, `verifier.runtime`), emits an `AgentRegistered` event. |
 
@@ -194,9 +187,9 @@ The minter additionally tracks UMA settlement events to update `verifier.stats.*
 1. The reporter opens the PWA. The browser captures GPS coordinates.
 2. The PWA queries the suggester. The list is empty (AIS-dark) or the reporter selects a vessel.
 3. The reporter takes a photo and confirms the IMO.
-4. The PWA pulls a fresh nonce from cTRNG, hashes the metadata tuple, and requests a WebAuthn signature.
+4. The PWA pulls a fresh nonce from cTRNG and writes it into the metadata JSON.
 5. The PWA uploads the photo and metadata JSON to Swarm.
-6. The wallet signs `ReportRegistry.submit()`. The contract verifies the WebAuthn signature, pulls $5 USDC into escrow, opens a UMA OOv3 assertion `"Report at bzz://<meta> is true"`, and emits `Submitted`.
+6. The wallet signs `ReportRegistry.submit()`. The contract pulls the $5-equivalent bond + UMA's anti-spam minimum into escrow, opens a UMA OOv3 assertion `"Report at bzz://<meta> is true"`, and emits `Submitted`.
 7. The liveness window starts (30s–1m for demo).
 8. Verifiers poll, fetch metadata, run cheap fakeness checks, see no anomaly, skip locally.
 9. Liveness expires uncontested. UMA fires `assertionResolvedCallback(id, true)` on `ReportRegistry`. The contract returns the bond and triggers `SlashPool.payReward()` for the small reward (when the reward is enabled — see §8).
@@ -205,7 +198,7 @@ The minter additionally tracks UMA settlement events to update `verifier.stats.*
 
 ### 5.2 Adversarial path — stolen photo, dispute and slash
 
-1. A bad actor submits a Google-Images photo with fabricated coordinates. Their WebAuthn signature is still valid — the protocol does **not** claim cryptographic proof of capture, only bonded skin-in-the-game.
+1. A bad actor submits a Google-Images photo with fabricated coordinates. Their on-chain submission is well-formed — the protocol does **not** claim cryptographic proof of capture, only bonded skin-in-the-game.
 2. Multiple verifiers see the `Submitted` event. Each fetches the metadata via Verified Fetch and runs its policy.
 3. One or more verifiers' policies fire (the ASI mock returns `fake` — keyed on an unallocated or otherwise suspicious IMO per `NICK_SPEC.md` §7.5). Each races to call UMA's `disputeAssertion` with a counter-bond.
 4. First-to-mine wins. The losing verifiers see the slot taken and skip.
@@ -338,14 +331,14 @@ The optimistic-oracle pattern (submit, wait, auto-settle) is simple to implement
 
 - The `reports` mapping (one `Report` struct per report ID, including the metadata Swarm reference, bond, settlement flags, dispute flags, orbital flags, and orbital image hash).
 - The `assertionId → reportId` mapping for UMA callback routing.
-- `SlashPool` USDC balance.
+- `SlashPool` bond-currency balance.
 - The immutable `orbitalAttestor` address.
 - UMA OOv3 assertions (claim string + ancillary data — gateway URL for voters).
 
 ### 9.2 Off-chain — Swarm (content-addressed)
 
 - The reporter's photo (~500 KB JPEG).
-- The metadata JSON (~1 KB) — `{ photo: bzz://, gps, timestamp, imo, ais_dark_flag, signature, nonce, ... }`.
+- The metadata JSON (~1 KB) — `{ photo: bzz://, gps, timestamp, imo, ais_dark_flag, nonce, ... }`.
 - The vessel dossier JSON — full sighting history aggregated per IMO, including the `orbital_corroboration` block when present.
 - The mocked orbital imagery (and its capture metadata).
 - The mocked TEE inference JSON, always carrying `"mocked": true`.
@@ -374,15 +367,56 @@ The recommended folder structure expresses this generality without duplicating i
 
 **Scope discipline**: do not double the implementation work to "prove" the abstraction. If the team has time to ship the `core/` vs `vessel-app/` split (see §19), the generalisation lives in the folder structure and in `BondedPhotoClaim` being abstract; otherwise the abstraction is signalled in documentation only. One working vessel application is sufficient. The framing is "designed to generalise" — do not claim a framework that was not shipped.
 
+### 10.1 Concrete verification primitives — what AI agents must do
+
+Two distinct primitives in Swarm, both exposed by `bee-js`. AI agents (verifier skill, minter, orbital orchestrator, any future consumer) MUST use these when reading from Swarm — never trust the gateway response on its own.
+
+**Immutable content — the splitter / BMT chunker.**
+Files and JSON uploaded via `bee.uploadFile(...)` / `bee.uploadData(...)` are split through the BMT (Binary Merkle Tree) chunker. The returned reference is the BMT root hash of the byte stream. Verification recipe:
+
+1. Fetch the bytes from any Bee endpoint or HTTPS gateway using the reference.
+2. Re-run the same chunker on the fetched bytes (`bee-js` exposes the splitter).
+3. Compare the recomputed root hash to the reference. Reject on mismatch.
+
+For Phare's reporter-side pipeline (`web/`):
+- The photo bytes are uploaded via `bee.uploadFile` → the returned BMT root is the `photoRef` written into the metadata JSON as `bzz://<photoRef>`.
+- The metadata JSON is uploaded via `bee.uploadData` → the returned BMT root is the `metaRef` passed on-chain via `submit()` as `metadataSwarm`.
+- The on-chain `photoHash` is `keccak256(photoBytes)` — independent of the BMT root. AI agents get **two** cryptographic anchors per report: the BMT root (commits to the bytes-on-Swarm) and the keccak256 (commits to the bytes-as-photographed). Both must match the fetched bytes; either failing means tampering.
+
+**Mutable content — Single Owner Chunks (SOC).**
+A SOC is a chunk whose address is `keccak256(identity || ownerAddress)` and whose payload is signed by the owner over `keccak256(identity || payload)`. The 32-byte `identity` is chosen by the uploader; the signature lets any reader verify the chunk truly originated from the claimed owner. Same `(owner, identity)` pair → same chunk address; new payload + new signature overwrites in place. Verification recipe:
+
+1. Fetch the chunk at the deterministic address derived from `(identity, owner)`.
+2. Recover the signer from the chunk's signature over `keccak256(identity || payload)`.
+3. Confirm the recovered address equals the expected owner. Reject otherwise.
+
+SOCs underpin Swarm Feeds, which we use for Phare's mutable per-vessel state (`(owner = minter EOA, topic = imo-<n>)` → latest known position, latest dossier ref). Reporter-side uploads are **not** SOC-based — the photo + metadata of a single sighting are immutable by design (a report is bonded; its content cannot be retroactively edited).
+
+**Where SOC sits in the pipeline.**
+- Reporter PWA (`web/`): immutable only. No SOC writes.
+- Minter (`minter/`): writes SOC-backed feeds keyed by IMO when each settled sighting comes in. Owner = minter EOA. Identity = `keccak256("phare:vessel:<imo>")` or similar deterministic derivation.
+- Verifier skill / consumers: read SOC feeds, verify owner signature, then BMT-verify whatever Swarm reference the feed payload pointed at.
+
+### 10.2 Reference module map for downstream agents
+
+When the verifier skill, minter, and orbital orchestrator are wired up, they all import the same Swarm helpers. Recommended interface (lives in `swarm/` package, shared across services):
+
+```
+verifyImmutable(reference, bytes)     -> throws on BMT mismatch
+verifyAndFetch(reference)             -> fetch + BMT-verify in one call
+readFeedLatest(owner, identity)       -> SOC-verify + return latest payload
+writeFeedNext(owner, identity, ...)   -> sign + push next SOC update (minter only)
+```
+
+Implementations all delegate to `bee-js`. Any failure → throw, never return tampered bytes.
+
 ---
 
 ## 11. Trust model and credible neutrality
 
 Each layer of the system makes a different trust claim:
 
-- **Reporter device** — trusted to hold a passkey; not trusted not to lie. Bond replaces background check.
-- **Reporter EOA** — trusted to be the principal that signed the on-chain submission; rotatable per report for privacy.
-- **WebAuthn signature** — verified on-chain; binds the metadata tuple to *some* device. Does not certify that the photo was captured with the device's camera; certifies only that the claim was bonded by someone with the passkey.
+- **Reporter EOA** — trusted to be the principal that signed the on-chain submission; not trusted not to lie. Bond replaces background check. Rotatable per report for privacy.
 - **Verifier policy** — public on Swarm; consumers can judge a dispute outcome against the verifier's declared checks.
 - **UMA OOv3 voters** — trusted via UMA's economic alignment, not institutional trust.
 - **OpenSanctions** — trusted as a public, daily-updated open-data source; the vessel's sanction status is cached into ENS but the canonical source is OpenSanctions itself.
@@ -397,7 +431,6 @@ Each layer of the system makes a different trust claim:
 The project explicitly targets the "Best Privacy by Design" prize.
 
 - The reporter EOA is anonymous and rotatable per report.
-- The passkey lives in the device's secure hardware and never leaves it.
 - No off-chain authentication, no email, no phone, no KYC — at any layer that touches a citizen.
 - The metadata JSON contains GPS and timestamp; this is the price of the report's truthfulness claim.
 - The `vessel.reporters` and `vessel.firstReporter` ENS records are open privacy questions (`ENS_SPEC.md` §9) — listing an EOA permanently next to a sanctioned vessel is a soft de-anonymisation surface. Options: omit from ENS, keep only behind a salted hash in the Swarm log, or accept the trade-off. Decision needed before any mainnet launch; demo-acceptable as-is.
@@ -408,7 +441,7 @@ The project explicitly targets the "Best Privacy by Design" prize.
 ## 13. Demo plan (3 minutes)
 
 1. **Hook** — one sentence on shadow fleet and ecological cost.
-2. **Live happy-path submission** — a Mac browser in demo-mode location (off Cyprus). Suggester returns empty list (AIS-dark). Reporter ticks AIS-dark, types a real OpenSanctions-listed IMO (PABLO, IMO 9133701), picks an OSINT photo, taps Touch ID. Swarm upload, submit, 30s liveness ticking visibly.
+2. **Live happy-path submission** — a Mac browser in demo-mode location (off Cyprus). Suggester returns empty list (AIS-dark). Reporter ticks AIS-dark, types a real OpenSanctions-listed IMO (PABLO, IMO 9133701), picks an OSINT photo, signs the `submit()` tx in their wallet. Swarm upload, submit, 30s liveness ticking visibly.
 3. **Adversarial submission** — second tab with a deliberately stolen Google-Images tanker photo paired with an unallocated IMO that the ASI mock flags as `fake` (per `NICK_SPEC.md` §7.5). Multiple verifier installations race in mempool. The fastest mines the dispute. Winner's `verifier.stats.won` increments live via NameStone.
 4. **Settlement of legit report** — liveness expires uncontested. Bond returns to reporter (with reward, depending on §8 decision). Minter mints `imo-9133701.vessel.phare.eth` and sets the records. Resolve in browser; show the records (sanction reason, AIS-dark flag, contenthash to the Swarm dossier including the photo). Show the orbital corroboration badge once the orchestrator's pipeline lands.
 5. **Close** — three artifacts on screen: vessel ENS subname, verifier ENS subname, Swarm dossier. *"One PWA, one ClawHub skill, a global sentinel network."*
@@ -442,8 +475,7 @@ This is the only file two devs both need to touch. The whole contract is pre-wri
 
 | Boundary | Owners | Frozen artifact |
 |---|---|---|
-| `submit()` signature + WebAuthn payload | A calls ↔ B verifies | Exact byte order, hash algo, signature encoding |
-| WebAuthn signing payload | A signs ↔ B verifies | Exact ABI encoding of the metadata tuple |
+| `submit()` signature | A calls ↔ B implements | Exact ABI: imo, ais-dark flag, photoHash, metadata Swarm reference |
 | `Submitted` event | B emits ↔ minter + skill consume | Field set, indexing |
 | `Settled` event | B emits ↔ minter + orbital orchestrator consume | Field set |
 | `attest()` signature | A calls ↔ B's contract storage | Function signature + EIP-191 digest layout |
@@ -454,7 +486,7 @@ This is the only file two devs both need to touch. The whole contract is pre-wri
 
 ### 14.4 Pre-event checklist (highlights)
 
-Credentials and addresses (commit `.env.example` with every name): UMA OOv3 address on Sepolia (`0x9923D42eF695B5dd9911D05Ac944d4cAca3c4EAB`), Daimo p256-verifier address on Sepolia, NameStone API key + parent + nested subdomain config, OpenSanctions API key, Swarm postage stamp ID or Bee endpoint, Orbitport Client ID + Secret, KMS Ethereum key provisioned (address recorded, hardcoded into `ReportRegistry`), Sepolia faucet (three funded EOAs for reporter / verifier / attester), Sepolia USDC (UMA-whitelisted variant — pinned at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` per `NICK_SPEC.md` §14, verify at the UMA desk on day 0).
+Credentials and addresses (commit `.env.example` with every name): UMA OOv3 address on Sepolia (`0xFd9e2642a170aDD10F53Ee14a93FcF2F31924944`), NameStone API key + parent + nested subdomain config, OpenSanctions API key, Swarm postage stamp ID or Bee endpoint, Orbitport Client ID + Secret, KMS Ethereum key provisioned (address recorded, hardcoded into `ReportRegistry`), Sepolia faucet (three funded EOAs for reporter / verifier / attester), bond currency: **WETH on Sepolia** (`0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9`) — UMA-whitelisted, min bond 0.002 WETH. The earlier USDC pin (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) was dropped after probing UMA's Sepolia AddressWhitelist: that token's UMA min bond is 400 USDC, impractical for the demo. Mainnet deployment can revisit USDC.
 
 Fixtures (committed in `fixtures/`): 2–3 vessel IMOs verified in OpenSanctions `maritime` (PABLO 9133701, YOUNG YONG 9259325, plus a backup), OSINT photos with attribution, suggester JSON, AIS-gap screenshots, one fabricated "stolen Google Images" photo paired with an unallocated IMO for the adversarial demo. The verifier skill's `asi-fixtures.json` and `shadow-vessels.json` ship inside `skill/data/` per `NICK_SPEC.md` §7.6 — not in `fixtures/`.
 
@@ -495,15 +527,13 @@ ENS pre-event setup: acquire the parent name on the chosen testnet, wrap it in t
 
 ## 16. Most likely failure modes and mitigations
 
-- **UMA OOv3 callback signatures mismatch on-chain reality** — confirm at the sponsor desk on day 0 before writing `submit()`. The Sepolia deployment is pinned at `0x9923D42eF695B5dd9911D05Ac944d4cAca3c4EAB` per `NICK_SPEC.md`; verify it is still live and that USDC is whitelisted as collateral.
-- **KMS Ethereum scheme is experimental** — provision the key on Friday, sign a test message, recover the address on-chain. Verify before committing to the orbital flow. If broken, drop SpaceComputer to the cTRNG-only fallback (cTRNG nonce in WebAuthn signing is shallow but ships).
+- **UMA OOv3 callback signatures mismatch on-chain reality** — confirm at the sponsor desk on day 0 before writing `submit()`. The Sepolia deployment is pinned at `0xFd9e2642a170aDD10F53Ee14a93FcF2F31924944` (verified live via UMA's networks/11155111.json); verify WETH (`0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9`) remains on the OOv3 collateral whitelist.
+- **KMS Ethereum scheme is experimental** — provision the key on Friday, sign a test message, recover the address on-chain. Verify before committing to the orbital flow. If broken, drop SpaceComputer to the cTRNG-only fallback (cTRNG nonce embedded in metadata is shallow but ships).
 - **NameStone nested subdomain config not working** — test before the weekend. If broken, fall back to flat subdomains under the parent.
 - **Swarm postage stamps unavailable at the venue** — run our own Bee on Gnosis (~half a day of budget — would blow up the timeline, so confirm stamps before the weekend).
-- **Daimo p256-verifier not deployed on the chosen chain** — RIP-7212 should make this a no-op fallback, but verify.
 - **Verifier skill takes longer than 90 min** — cut to a single fakeness check (the ASI verdict mock); the demo only needs one to fire.
 - **OpenClaw heartbeat minimum cadence is too long** — default may be 30 minutes. Plan B: 1m heartbeat with 1m liveness; on demo day, request shorter cadence from the OpenClaw operator if possible.
-- **Sepolia USDC variant for UMA** — Sepolia USDC is pinned at `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` (the UMA-whitelisted variant per `NICK_SPEC.md`). Verify at the UMA desk on day 0 that this exact token is in OOv3's collateral list — wrong variant means dispute reverts.
-- **UMA minimum bond may exceed $5** — verify on day 0; raise the bond (and faucet instructions) if needed.
+- **UMA minimum bond may exceed the protocol bond** — Sepolia bond currency is WETH (min bond 0.002 WETH ≈ $5–7). The earlier USDC pin was abandoned because UMA's Sepolia min bond for that token is 400 USDC. Verify both the OOv3 whitelist membership and `getMinimumBond(WETH)` on day 0; raise the protocol bond + faucet instructions if min bond drifts.
 - **Verifier ENS handle collisions** — ~1 in 16M; demo-acceptable; mitigation deferred.
 
 ---
@@ -532,13 +562,12 @@ The build is structured so that work on the critical path also earns prize submi
 | ENS — AI Agents | ENS | `<handle>.verifier.phare.eth` with policy, soul, runtime, stats, and live `verifier.lastDecision` text record updated by the agent itself | High |
 | ENS — Most Creative Use | ENS | `imo-<n>.vessel.phare.eth` — ENS subnames for physical assets that actively try to be invisible; contenthash → Swarm dossier | High |
 | SpaceComputer | SpaceComputer | New Orbitport Application Plugin + KMS-signed on-chain attestation + cTRNG nonce + spaceTEE call site (mock-now-real-later) | High |
-| Best Privacy by Design | ETHPrague | Anonymous EOA + WebAuthn passkey, rotatable per report, no off-chain auth | High |
-| Best UX Flow | ETHPrague | Single PWA: open, allow camera + GPS, photo, Touch ID, see settlement | Medium |
-| Best Hardware Usage | ETHPrague | Daimo p256-verifier + Secure Enclave / StrongBox / TPM passkeys | High |
+| Best Privacy by Design | ETHPrague | Anonymous EOA, rotatable per report, no off-chain auth | Medium |
+| Best UX Flow | ETHPrague | Single PWA: open, allow camera + GPS, photo, sign tx, see settlement | Medium |
 | Verified Fetch | Swarm | Minter + verifier skill + orbital orchestrator all recompute Swarm hashes locally; never trust the gateway | High |
 | Sourcify (free pickup) | Sourcify | Foundry deploy + Sourcify verification on the deploy step | Free pickup if it lands |
 
-Realistic target: **$14k–17.5k**. Umia was dropped after the sponsor conversation — its agent-venture criteria (governance, token, capital-formation) are not where Phare's centre of gravity is, and reframing would have added scope that does not serve the core product.
+Realistic target: **$14k–17.5k** (revised downward after dropping the WebAuthn / Daimo p256-verifier path; the "Best Hardware Usage" prize is no longer in scope). Umia was dropped after the sponsor conversation — its agent-venture criteria (governance, token, capital-formation) are not where Phare's centre of gravity is, and reframing would have added scope that does not serve the core product.
 
 ---
 
@@ -547,7 +576,7 @@ Realistic target: **$14k–17.5k**. Umia was dropped after the sponsor conversat
 ```
 phare-protocol/
   contracts/        # Foundry — ReportRegistry, SlashPool, EnsRegistrar
-  web/              # Reporter PWA — camera + GPS + WebAuthn + Swarm upload + viem
+  web/              # Reporter PWA — camera + GPS + Swarm upload + viem
   skill/            # phare/verifier — OpenClaw skill, published on ClawHub
   suggester/        # AIS vessel suggester (DEMO mode for hackathon)
   minter/           # OpenSanctions + NameStone vessel + verifier-stats writer
