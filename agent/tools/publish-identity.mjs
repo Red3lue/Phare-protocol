@@ -56,22 +56,22 @@ const wc = walletClient();
 const pc = publicClient();
 const cf = cfg();
 
+// Serial, not parallel: both setText calls go from the same EOA, so
+// firing them concurrently makes viem reuse the same nonce → revert.
 let policyTx, soulTx;
 try {
-    [policyTx, soulTx] = await Promise.all([
-        setVerifierPolicy({
-            walletClient: wc, publicClient: pc,
-            resolver: cf.publicResolver,
-            handle:   state.handle,
-            value:    policyPin.ref,
-        }),
-        setVerifierSoul({
-            walletClient: wc, publicClient: pc,
-            resolver: cf.publicResolver,
-            handle:   state.handle,
-            value:    soulPin.ref,
-        }),
-    ]);
+    policyTx = await setVerifierPolicy({
+        walletClient: wc, publicClient: pc,
+        resolver: cf.publicResolver,
+        handle:   state.handle,
+        value:    policyPin.ref,
+    });
+    soulTx = await setVerifierSoul({
+        walletClient: wc, publicClient: pc,
+        resolver: cf.publicResolver,
+        handle:   state.handle,
+        value:    soulPin.ref,
+    });
 } catch (e) {
     fail(`setText reverted: ${e.shortMessage ?? e.message}`);
 }

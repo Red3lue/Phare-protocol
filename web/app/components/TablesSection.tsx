@@ -16,6 +16,15 @@ function bzzShort(ref: string) {
     return `bzz://${clean.slice(0, 10)}…`;
 }
 
+function destinationLabel(orbitalTeePred: string): string {
+    // The TEE prediction record is a bzz:// ref to a JSON dossier. We
+    // can't fetch it synchronously inside a row render, so just show the
+    // fact that an attestation exists — the user can click the swarm
+    // link to see the inferred destination.
+    if (!orbitalTeePred) return '';
+    return orbitalTeePred.startsWith('bzz://') ? 'attested ↗' : orbitalTeePred;
+}
+
 function VesselRowView({ v, onSelect }: { v: VesselRow; onSelect: () => void }) {
     const meta = vesselDisplay(v.imo);
     return (
@@ -29,24 +38,31 @@ function VesselRowView({ v, onSelect }: { v: VesselRow; onSelect: () => void }) 
             </td>
             <td className="px-4 py-3 font-mono text-[12px] text-ink tabular">{v.imo}</td>
             <td className="px-4 py-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink/55">
-                {meta.flag}
+                {v.country || meta.flag}
             </td>
-            <td className="px-4 py-3">
-                <div className="flex flex-wrap gap-1">
-                    {meta.sanctions.length === 0 ? (
-                        <span className="font-mono text-[11px] text-ink/35">—</span>
-                    ) : meta.sanctions.map((s) => (
-                        <span
-                            key={s}
-                            className="rounded-full bg-turq-50/80 edge-soft px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.2em] text-ink/80"
-                        >
-                            {s}
-                        </span>
-                    ))}
-                </div>
+            <td className="px-4 py-3 font-mono text-[11px] text-ink/80 truncate max-w-[180px]" title={v.cargo}>
+                {v.cargo || <span className="text-ink/35">—</span>}
             </td>
             <td className="px-4 py-3 font-mono text-[12px] text-ink tabular">{v.sightings}</td>
             <td className="px-4 py-3 font-mono text-[12px] text-ink/55 tabular">{v.disputed}</td>
+            <td className="px-4 py-3 font-mono text-[11px] text-ink/80 tabular">
+                {v.lastSeen || <span className="text-ink/35">—</span>}
+            </td>
+            <td className="px-4 py-3">
+                {v.orbitalTeePred ? (
+                    <a
+                        href={bzzUrl(v.orbitalTeePred)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-[11px] text-turq-700 hover:underline"
+                        title={v.orbitalTeePred}
+                    >
+                        {destinationLabel(v.orbitalTeePred)}
+                    </a>
+                ) : (
+                    <span className="font-mono text-[11px] text-ink/35">—</span>
+                )}
+            </td>
             <td className="px-4 py-3">
                 <a
                     href={ensUrl(v.ens)}
@@ -224,10 +240,12 @@ export default function TablesSection({
                                     {[
                                         'vessel',
                                         'imo',
-                                        'flag',
-                                        'sanctions',
+                                        'country',
+                                        'cargo',
                                         'sightings',
                                         'disputed',
+                                        'last seen',
+                                        'destination',
                                         'ens',
                                         'swarm',
                                     ].map((h) => (
@@ -242,11 +260,11 @@ export default function TablesSection({
                             </thead>
                             <tbody>
                                 {vessels.error ? (
-                                    <StatusRow colSpan={8} message={`error: ${vessels.error}`} />
+                                    <StatusRow colSpan={10} message={`error: ${vessels.error}`} />
                                 ) : vessels.loading && !vessels.data ? (
-                                    <StatusRow colSpan={8} message="reading chain…" />
+                                    <StatusRow colSpan={10} message="reading chain…" />
                                 ) : !vessels.data || vessels.data.length === 0 ? (
-                                    <StatusRow colSpan={8} message="— no vessels minted yet —" />
+                                    <StatusRow colSpan={10} message="— no vessels minted yet —" />
                                 ) : (
                                     vessels.data.map((v) => (
                                         <VesselRowView

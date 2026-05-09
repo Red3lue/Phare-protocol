@@ -83,6 +83,12 @@ contract ReportRegistry {
         bytes32 assertionId;      // UMA OOv3
         bool    orbitalAttested;
         bytes32 orbitalImageHash;
+        // Vessel descriptors propagated to ENS text records on settle.
+        // Reporter-supplied; not adjudicated separately by UMA — they ride
+        // on the truthfulness assertion of the metadata as a whole.
+        string  country;          // origin / flag-of-convenience hint, e.g. "RU"
+        string  cargo;            // free-form cargo description, e.g. "Crude · ~730k bbl"
+        string  lastSeen;         // "lat,lon" snapshot at submission time
     }
 
     uint256 public reportCount;
@@ -102,7 +108,10 @@ contract ReportRegistry {
         string  metadataSwarm,
         bytes32 assertionId,
         uint96  bond,
-        uint96  umaBond
+        uint96  umaBond,
+        string  country,
+        string  cargo,
+        string  lastSeen
     );
 
     event Disputed(bytes32 indexed reportId, address indexed disputer);
@@ -190,7 +199,10 @@ contract ReportRegistry {
         uint256 imo,
         bool aisDark,
         bytes32 photoHash,
-        string calldata metadataSwarm
+        string calldata metadataSwarm,
+        string calldata country,
+        string calldata cargo,
+        string calldata lastSeen
     ) external returns (bytes32 reportId) {
         require(imo                          != 0,         "imo=0");
         require(photoHash                    != bytes32(0), "photoHash=0");
@@ -234,6 +246,9 @@ contract ReportRegistry {
         r.photoHash     = photoHash;
         r.metadataSwarm = metadataSwarm;
         r.assertionId   = assertionId;
+        r.country       = country;
+        r.cargo         = cargo;
+        r.lastSeen      = lastSeen;
         // r.status remains STATUS_PENDING (0).
 
         assertionToReport[assertionId] = reportId;
@@ -247,7 +262,10 @@ contract ReportRegistry {
             metadataSwarm,
             assertionId,
             protocolBond,
-            uint96(umaBond)
+            uint96(umaBond),
+            country,
+            cargo,
+            lastSeen
         );
     }
 
@@ -278,7 +296,7 @@ contract ReportRegistry {
             r.status = STATUS_SETTLED_TRUE;
             uint256 refund = uint256(r.bond) + uint256(r.umaBond);
             require(bondCurrency.transfer(r.reporter, refund), "refund failed");
-            _onTruthfulSettlement(r.imo, r.metadataSwarm, wasDisputed);
+            _onTruthfulSettlement(r, wasDisputed);
         } else {
             r.status = STATUS_SETTLED_FALSE;
             address disputer = oo.getAssertion(assertionId).disputer;
@@ -359,23 +377,27 @@ contract ReportRegistry {
 
     /// @dev Called from `assertionResolvedCallback` only when the assertion
     ///      resolved truthfully. First sighting per IMO mints the vessel
-    ///      subname; subsequent ones update its sighting counters. No-op if
-    ///      Lighthouse is not yet wired.
-    function _onTruthfulSettlement(uint256 imo, string memory swarmRef, bool wasDisputed) internal {
+    ///      subname; subsequent ones refresh its records (incl. the trio of
+    ///      vessel descriptors). No-op if Lighthouse is not yet wired.
+    function _onTruthfulSettlement(Report storage r, bool wasDisputed) internal {
         if (address(lighthouse) == address(0)) return;
 
+        uint256 imo = r.imo;
         sightingsByImo[imo] += 1;
         if (wasDisputed) disputedByImo[imo] += 1;
 
         if (!vesselNamed[imo]) {
             vesselNamed[imo] = true;
-            lighthouse.nameVessel(imo, swarmRef);
+            lighthouse.nameVessel(imo, r.metadataSwarm, r.country, r.cargo, r.lastSeen);
         } else {
             lighthouse.recordSighting(
                 imo,
-                swarmRef,
+                r.metadataSwarm,
                 sightingsByImo[imo],
-                disputedByImo[imo]
+                disputedByImo[imo],
+                r.country,
+                r.cargo,
+                r.lastSeen
             );
         }
     }

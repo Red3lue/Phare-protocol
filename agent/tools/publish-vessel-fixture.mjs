@@ -53,6 +53,9 @@ const imo     = BigInt(process.env.IMO ?? '9133701');
 const gpsLat  = Number(process.env.GPS_LAT ?? 26.55);
 const gpsLon  = Number(process.env.GPS_LON ?? 56.25);
 const aisDark = (process.env.AIS_DARK ?? 'true') === 'true';
+const country  = process.env.COUNTRY  ?? 'RU';
+const cargo    = process.env.CARGO    ?? 'Crude · ~730k bbl';
+const lastSeen = process.env.LASTSEEN ?? `${gpsLat},${gpsLon}`;
 
 const reporterPk = process.env.DEPLOYER_PRIVATE_KEY;
 if (!reporterPk) fail('DEPLOYER_PRIVATE_KEY not set in repo-root /.env');
@@ -85,6 +88,9 @@ const metadata = {
     imo:       Number(imo),
     ais_dark:  aisDark,
     nonce:     nonceHex,
+    country,
+    cargo,
+    lastSeen,
     fixture:   true,
     notes:     'Maintenance re-publish to overwrite a stub vessel.swarm.log on imo-<n>.vessel.phare.eth.',
 };
@@ -100,6 +106,9 @@ try {
         aisDark,
         photoHash,
         metadataSwarm: metaPin.ref,
+        country,
+        cargo,
+        lastSeen,
     });
 } catch (e) {
     fail(`submit reverted: ${e.shortMessage ?? e.message}`);

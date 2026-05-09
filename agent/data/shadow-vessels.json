@@ -1,19 +1,13 @@
 {
   "_comment": "Local mirror of OpenSanctions maritime hits, used by evaluate.mjs as an informational cross-reference. Per NICK_SPEC §15 this is informational only — does not branch the decision; the ASI fixture verdict is authoritative for the demo.",
   "vessels": [
-    {
-      "imo": 9133701,
-      "name": "PABLO",
-      "flag": "Cook Islands",
-      "sanction": "OFAC SDN — IMO sanctioned for shadow-fleet operations",
-      "aliases": ["PABLO"]
-    },
-    {
-      "imo": 9259325,
-      "name": "YOUNG YONG",
-      "flag": "Cameroon",
-      "sanction": "Russia oil price-cap evasion (UK OFSI)",
-      "aliases": ["YOUNG YONG"]
-    }
+    { "imo": 9133701, "name": "PABLO",      "flag": "Cook Islands",        "sanction": "OFAC SDN — IMO sanctioned for shadow-fleet operations" },
+    { "imo": 9259325, "name": "YOUNG YONG", "flag": "Cameroon",            "sanction": "Russia oil price-cap evasion (UK OFSI)" },
+    { "imo": 9329760, "name": "EAGLE S",    "flag": "Cook Islands",        "sanction": "UK OFSI / EU 14 — Estlink 2 cable severance suspect" },
+    { "imo": 9224984, "name": "YI PENG 3",  "flag": "Hong Kong / China",   "sanction": "Under investigation — BCS East-West cable cut" },
+    { "imo": 9311017, "name": "NS BURGAS",  "flag": "Gabon",               "sanction": "OFAC SDN + EU 14 — Russian crude STS via Novorossiysk" },
+    { "imo": 9489912, "name": "TURBA",      "flag": "Palau",               "sanction": "OFAC SDN — Iranian crude via Kharg Island" },
+    { "imo": 9266880, "name": "KAVKAZ",     "flag": "Cook Islands",        "sanction": "EU + UK + OFAC — Black Sea / Bosphorus STS" },
+    { "imo": 9412591, "name": "NIGHT IBIS", "flag": "Equatorial Guinea",   "sanction": "OFAC SDN — Bab el-Mandeb / Red Sea drift" }
   ]
 }

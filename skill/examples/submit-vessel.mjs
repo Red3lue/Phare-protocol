@@ -21,6 +21,13 @@ const aisDark = (process.env.AIS_DARK ?? 'true') === 'true';
 const photoHash = keccak256(toHex(`example-photo-imo-${imo}`));
 const metadataSwarm = process.env.METADATA_SWARM ?? `bzz://example-imo-${imo}`;
 
+// Vessel descriptors propagated to ENS text records on settle. Reporter-
+// supplied; voters arbitrate truthfulness of the metadata as a whole, not
+// these fields individually.
+const country  = process.env.VESSEL_COUNTRY  ?? 'RU';
+const cargo    = process.env.VESSEL_CARGO    ?? 'Crude · ~730k bbl';
+const lastSeen = process.env.VESSEL_LASTSEEN ?? '26.55,56.25';
+
 const bond = await getTotalBond({ publicClient, registry: cfg.reportRegistry });
 console.log('Bond breakdown     :', {
   protocolBond: bond.protocolBond.toString(),
@@ -35,6 +42,9 @@ const { txHash, reportId, assertionId } = await submitReport({
   aisDark,
   photoHash,
   metadataSwarm,
+  country,
+  cargo,
+  lastSeen,
 });
 
 console.log('submit tx          :', txHash);

@@ -80,7 +80,7 @@ contract ReportRegistryForkTest is Test {
         umaBond = oo.getMinimumBond(WETH_ADDR);
         _fundAndApprove(reporter, address(registry), uint256(PROTOCOL_BOND) + umaBond);
         vm.prank(reporter);
-        reportId = registry.submit(IMO, AIS_DARK, PHOTO_HASH, META_SWARM);
+        reportId = registry.submit(IMO, AIS_DARK, PHOTO_HASH, META_SWARM, "", "", "");
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ contract ReportRegistryForkTest is Test {
 
         vm.prank(reporter);
         vm.expectRevert(bytes("metaSwarm=empty"));
-        registry.submit(IMO, AIS_DARK, PHOTO_HASH, "");
+        registry.submit(IMO, AIS_DARK, PHOTO_HASH, "", "", "", "");
     }
 
     function test_Submit_RevertsOnZeroPhotoHash() public {
@@ -227,7 +227,7 @@ contract ReportRegistryForkTest is Test {
 
         vm.prank(reporter);
         vm.expectRevert(bytes("photoHash=0"));
-        registry.submit(IMO, AIS_DARK, bytes32(0), META_SWARM);
+        registry.submit(IMO, AIS_DARK, bytes32(0), META_SWARM, "", "", "");
     }
 
     function test_Submit_RevertsOnZeroImo() public {
@@ -237,6 +237,6 @@ contract ReportRegistryForkTest is Test {
 
         vm.prank(reporter);
         vm.expectRevert(bytes("imo=0"));
-        registry.submit(0, AIS_DARK, PHOTO_HASH, META_SWARM);
+        registry.submit(0, AIS_DARK, PHOTO_HASH, META_SWARM, "", "", "");
     }
 }

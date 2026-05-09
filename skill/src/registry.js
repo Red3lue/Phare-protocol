@@ -89,6 +89,9 @@ export async function submitReport({
   aisDark,
   photoHash,
   metadataSwarm,
+  country  = '',
+  cargo    = '',
+  lastSeen = '',
   autoWrap = true,
 }) {
   const { total, bondCurrency } = await getTotalBond({ publicClient, registry });
@@ -109,7 +112,7 @@ export async function submitReport({
     address: registry,
     abi: reportRegistryAbi,
     functionName: 'submit',
-    args: [BigInt(imo), Boolean(aisDark), photoHash, metadataSwarm],
+    args: [BigInt(imo), Boolean(aisDark), photoHash, metadataSwarm, country, cargo, lastSeen],
   });
   const receipt = await publicClient.waitForTransactionReceipt({ hash: submitHash });
 

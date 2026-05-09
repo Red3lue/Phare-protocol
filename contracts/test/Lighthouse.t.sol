@@ -78,7 +78,7 @@ contract LighthouseTest is Test {
         string  memory swarmRef = "bzz://aaaa";
 
         vm.prank(registry);
-        bytes32 node = lighthouse.nameVessel(imo, swarmRef);
+        bytes32 node = lighthouse.nameVessel(imo, swarmRef, "", "", "");
 
         assertEq(node, _vesselNode(imo), "node hash");
         assertEq(wrapper.ownerOf(uint256(node)), address(lighthouse), "vessel owner = Lighthouse");
@@ -93,20 +93,20 @@ contract LighthouseTest is Test {
     function test_NameVessel_OnlyRegistry() public {
         vm.prank(stranger);
         vm.expectRevert(Lighthouse.NotRegistry.selector);
-        lighthouse.nameVessel(1, "bzz://x");
+        lighthouse.nameVessel(1, "bzz://x", "", "", "");
     }
 
     function test_RecordSighting_OverwritesPriorValuesAndUpdatesCounters() public {
         uint256 imo = 9133701;
 
         vm.prank(registry);
-        lighthouse.nameVessel(imo, "bzz://first");
+        lighthouse.nameVessel(imo, "bzz://first", "", "", "");
 
         bytes32 node = _vesselNode(imo);
         assertEq(resolver.text(node, "vessel.swarm.log"), "bzz://first");
 
         vm.prank(registry);
-        lighthouse.recordSighting(imo, "bzz://second", 2, 1);
+        lighthouse.recordSighting(imo, "bzz://second", 2, 1, "", "", "");
 
         // setText is overwrite, not append.
         assertEq(resolver.text(node, "vessel.swarm.log"),         "bzz://second");
@@ -119,11 +119,11 @@ contract LighthouseTest is Test {
 
     function test_RecordSighting_OnlyRegistry() public {
         vm.prank(registry);
-        lighthouse.nameVessel(1, "bzz://x");
+        lighthouse.nameVessel(1, "bzz://x", "", "", "");
 
         vm.prank(stranger);
         vm.expectRevert(Lighthouse.NotRegistry.selector);
-        lighthouse.recordSighting(1, "bzz://y", 2, 0);
+        lighthouse.recordSighting(1, "bzz://y", 2, 0, "", "", "");
     }
 
     function test_RecordOrbital_WritesAllThreeKeys() public {
@@ -131,7 +131,7 @@ contract LighthouseTest is Test {
         bytes32 imageHash = keccak256("img");
 
         vm.prank(registry);
-        lighthouse.nameVessel(imo, "bzz://log");
+        lighthouse.nameVessel(imo, "bzz://log", "", "", "");
 
         vm.prank(registry);
         lighthouse.recordOrbital(imo, "bzz://image", imageHash, "bzz://tee");
@@ -152,12 +152,12 @@ contract LighthouseTest is Test {
         // to document the expected behaviour: registry must call only on
         // first sighting (or guard upstream).
         vm.prank(registry);
-        lighthouse.nameVessel(1, "bzz://x");
+        lighthouse.nameVessel(1, "bzz://x", "", "", "");
 
         // Mock allows re-mint but overwrites — assert that's the mock's
         // behaviour so we don't accidentally rely on "real" reverting here.
         vm.prank(registry);
-        bytes32 node = lighthouse.nameVessel(1, "bzz://y");
+        bytes32 node = lighthouse.nameVessel(1, "bzz://y", "", "", "");
         assertEq(wrapper.ownerOf(uint256(node)), address(lighthouse));
         // Documentation marker: on real NameWrapper this second call reverts.
         // ReportRegistry guards via `vesselNamed[imo]` so we never call twice.
@@ -199,14 +199,14 @@ contract LighthouseTest is Test {
         uint256 imo = 9133701;
 
         vm.prank(registry);
-        lighthouse.nameVessel(imo, "bzz://old");
+        lighthouse.nameVessel(imo, "bzz://old", "", "", "");
 
         bytes32 node = _vesselNode(imo);
         assertEq(resolver.text(node, "vessel.swarm.log"), "bzz://old");
 
         // Update via Lighthouse — Lighthouse owns the wrapped node.
         vm.prank(registry);
-        lighthouse.recordSighting(imo, "bzz://new", 5, 2);
+        lighthouse.recordSighting(imo, "bzz://new", 5, 2, "", "", "");
         assertEq(resolver.text(node, "vessel.swarm.log"), "bzz://new");
     }
 
@@ -216,7 +216,7 @@ contract LighthouseTest is Test {
         // and the wrapped owner is the Lighthouse contract, not the registry.
         uint256 imo = 9133701;
         vm.prank(registry);
-        lighthouse.nameVessel(imo, "bzz://x");
+        lighthouse.nameVessel(imo, "bzz://x", "", "", "");
 
         bytes32 node = _vesselNode(imo);
         vm.prank(registry);
@@ -296,7 +296,7 @@ contract LighthouseTest is Test {
 
         vm.prank(registry);
         vm.recordLogs();
-        lighthouse.nameVessel(imo, "bzz://x");
+        lighthouse.nameVessel(imo, "bzz://x", "", "", "");
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         bool seen;

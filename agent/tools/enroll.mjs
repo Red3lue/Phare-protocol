@@ -2,15 +2,21 @@
 // Mints <handle>.verifier.phare.eth via Lighthouse.enrollVerifier with PCC
 // burnt. Wraps /skill enrollVerifier.
 //
-// policyURI / soulURI are placeholders (`bzz://policy-stub`,
-// `bzz://soul-stub`) until the swarm tool ships. The verifier owns the
-// node (PCC burnt) and can rewrite these later via PublicResolver.setText
-// — the skill's set-last-decision tool already proves that path.
+// Pre-pins data/policy.json + data/soul.md to Swarm via pinImmutable so
+// the subname is minted with REAL BMT-pinned refs from the start —
+// no `bzz://policy-stub` placeholder phase. Caller can override with
+// POLICY_URI / SOUL_URI env vars.
+
+import fs   from 'node:fs';
+import path from 'node:path';
 
 import { enrollVerifier } from 'skill/lighthouse';
 
+import { pinImmutable } from './lib/swarm.mjs';
+
 import {
   PHASES,
+  DATA_DIR,
   cfg,
   publicClient,
   walletClient,
@@ -31,8 +37,26 @@ const wc  = walletClient();
 const pc  = publicClient();
 const cf  = cfg();
 
-const policyURI = process.env.POLICY_URI ?? 'bzz://policy-stub';
-const soulURI   = process.env.SOUL_URI   ?? 'bzz://soul-stub';
+// Pin identity artefacts unless caller overrode the URIs explicitly.
+let policyURI = process.env.POLICY_URI;
+let soulURI   = process.env.SOUL_URI;
+
+if (!policyURI || !soulURI) {
+  const policyPath = path.join(DATA_DIR, 'policy.json');
+  const soulPath   = path.join(DATA_DIR, 'soul.md');
+  if (!fs.existsSync(policyPath)) fail(`missing ${policyPath}`);
+  if (!fs.existsSync(soulPath))   fail(`missing ${soulPath}`);
+
+  const policyJson = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+  const soulText   = fs.readFileSync(soulPath, 'utf8');
+
+  try {
+    if (!policyURI) policyURI = (await pinImmutable(policyJson)).ref;
+    if (!soulURI)   soulURI   = (await pinImmutable(soulText)).ref;
+  } catch (e) {
+    fail(`swarm pin failed during enroll: ${e.message}`);
+  }
+}
 
 let result;
 try {
