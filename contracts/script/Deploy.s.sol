@@ -95,26 +95,24 @@ contract Deploy is Script {
         console.log("===================================================");
     }
 
-    /// @dev ffi-shells out to sed and rewrites the address lines in both
-    ///      /.env (REPORT_REGISTRY, SLASH_POOL) and /web/.env (their
-    ///      NEXT_PUBLIC_* mirrors) so any consumer — PWA or CLI helpers —
+    /// @dev ffi-shells out to sed and rewrites the address lines in every
+    ///      .env / .env.example file that ships with the project, so any
+    ///      consumer — PWA, CLI helpers, or a teammate cloning fresh —
     ///      picks up the freshly deployed contracts without a manual copy.
     function _updateWebEnv(address slashPoolAddr, address registryAddr) internal {
-        _patch(
-            string.concat(vm.projectRoot(), "/../.env"),
-            "REPORT_REGISTRY",
-            vm.toString(registryAddr),
-            "SLASH_POOL",
-            vm.toString(slashPoolAddr)
-        );
-        _patch(
-            string.concat(vm.projectRoot(), "/../web/.env"),
-            "NEXT_PUBLIC_REPORT_REGISTRY",
-            vm.toString(registryAddr),
-            "NEXT_PUBLIC_SLASH_POOL",
-            vm.toString(slashPoolAddr)
-        );
-        console.log("wrote addresses to    : .env, web/.env");
+        string memory regStr  = vm.toString(registryAddr);
+        string memory poolStr = vm.toString(slashPoolAddr);
+
+        _patch(string.concat(vm.projectRoot(), "/../.env"),
+            "REPORT_REGISTRY", regStr, "SLASH_POOL", poolStr);
+        _patch(string.concat(vm.projectRoot(), "/../.env.example"),
+            "REPORT_REGISTRY", regStr, "SLASH_POOL", poolStr);
+        _patch(string.concat(vm.projectRoot(), "/../web/.env"),
+            "NEXT_PUBLIC_REPORT_REGISTRY", regStr, "NEXT_PUBLIC_SLASH_POOL", poolStr);
+        _patch(string.concat(vm.projectRoot(), "/../web/.env.example"),
+            "NEXT_PUBLIC_REPORT_REGISTRY", regStr, "NEXT_PUBLIC_SLASH_POOL", poolStr);
+
+        console.log("wrote addresses to    : .env, .env.example, web/.env, web/.env.example");
     }
 
     function _patch(
