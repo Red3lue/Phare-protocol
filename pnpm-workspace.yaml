@@ -4,6 +4,7 @@ packages:
   - "suggester"
   - "minter"
   - "orbitalImager-sdk"
+  - "orbital-orchestrator"
   - "orbital-plugin"
   - "swarm"
   - "contracts"

@@ -12,9 +12,22 @@ importers:
 
   minter: {}
 
-  orbital: {}
+  orbital-orchestrator:
+    dependencies:
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      orbitalImager-sdk:
+        specifier: workspace:*
+        version: link:../orbitalImager-sdk
+      skill:
+        specifier: workspace:*
+        version: link:../skill
+      viem:
+        specifier: ^2.21.0
+        version: 2.48.11(typescript@5.9.3)
 
-  orbital-plugin: {}
+  orbitalImager-sdk: {}
 
   skill:
     dependencies:

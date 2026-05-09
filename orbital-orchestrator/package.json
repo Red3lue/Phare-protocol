@@ -1,0 +1,18 @@
+{
+  "name": "orbital-orchestrator",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Mock orchestrator — orbitalImager-sdk → inference → ENS records (live on Sepolia for verifier; .md ledger mirror) → (TODO) Swarm. Implements DESIGN_DOCUMENT §4.6.",
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "start": "node src/server.mjs",
+    "process": "node src/cli.mjs"
+  },
+  "dependencies": {
+    "orbitalImager-sdk": "workspace:*",
+    "skill": "workspace:*",
+    "viem": "^2.21.0",
+    "dotenv": "^16.4.5"
+  }
+}

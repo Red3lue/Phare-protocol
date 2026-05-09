@@ -44,5 +44,9 @@ skill/state/
 # orbitalImager-sdk runtime state (resumable session dirs, fetched images)
 orbitalImager-sdk/state/
 
+# orbital-orchestrator runtime state and fetched images
+orbital-orchestrator/images/
+orbital-orchestrator/state/
+
 # Forked Orbitport repo — tracked separately as Red3lue/orbitport
 orbitport/
