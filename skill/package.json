@@ -2,5 +2,24 @@
   "name": "skill",
   "version": "0.0.0",
   "private": true,
-  "description": "phare/verifier — OpenClaw skill (NICK_SPEC, DESIGN_DOCUMENT §4.4)"
+  "type": "module",
+  "description": "phare/verifier — OpenClaw skill (NICK_SPEC, DESIGN_DOCUMENT §4.4)",
+  "exports": {
+    ".": "./src/index.js",
+    "./lighthouse": "./src/lighthouse.js",
+    "./registry": "./src/registry.js",
+    "./abis": "./src/abis.js",
+    "./addresses": "./src/addresses.js"
+  },
+  "scripts": {
+    "example:enroll":          "node examples/enroll-verifier.mjs",
+    "example:update-verifier": "node examples/update-verifier.mjs",
+    "example:submit":          "node examples/submit-vessel.mjs",
+    "example:settle":          "node examples/settle-vessel.mjs",
+    "example:read":            "node examples/read-records.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "dotenv": "^16.4.5"
+  }
 }
