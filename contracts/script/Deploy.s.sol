@@ -89,11 +89,23 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        // ─── Summary ─────────────────────────────────────────────────────
-        console2.log("SlashPool           :", address(slashPool));
-        console2.log("ReportRegistry      :", address(registry));
-        console2.log("Lighthouse          :", address(lighthouse));
-        console2.log("Treasury            :", treasury);
-        console2.log("OrbitalAttestor     :", orbitalAttestor);
+    /// @dev ffi-shells out to sed and rewrites the address lines in every
+    ///      .env / .env.example file that ships with the project, so any
+    ///      consumer — PWA, CLI helpers, or a teammate cloning fresh —
+    ///      picks up the freshly deployed contracts without a manual copy.
+    function _updateWebEnv(address slashPoolAddr, address registryAddr) internal {
+        string memory regStr  = vm.toString(registryAddr);
+        string memory poolStr = vm.toString(slashPoolAddr);
+
+        _patch(string.concat(vm.projectRoot(), "/../.env"),
+            "REPORT_REGISTRY", regStr, "SLASH_POOL", poolStr);
+        _patch(string.concat(vm.projectRoot(), "/../.env.example"),
+            "REPORT_REGISTRY", regStr, "SLASH_POOL", poolStr);
+        _patch(string.concat(vm.projectRoot(), "/../web/.env"),
+            "NEXT_PUBLIC_REPORT_REGISTRY", regStr, "NEXT_PUBLIC_SLASH_POOL", poolStr);
+        _patch(string.concat(vm.projectRoot(), "/../web/.env.example"),
+            "NEXT_PUBLIC_REPORT_REGISTRY", regStr, "NEXT_PUBLIC_SLASH_POOL", poolStr);
+
+        console.log("wrote addresses to    : .env, .env.example, web/.env, web/.env.example");
     }
 }
