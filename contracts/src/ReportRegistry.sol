@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {IERC20}              from "./interfaces/IERC20.sol";
 import {IOptimisticOracleV3} from "./interfaces/IOptimisticOracleV3.sol";
 import {ISlashPool}          from "./interfaces/ISlashPool.sol";
+import {ILighthouse}         from "./interfaces/ILighthouse.sol";
 
 /// @title  ReportRegistry
 /// @notice Phare's bonded sighting registry. Reporters escrow a protocol bond
@@ -33,6 +34,18 @@ contract ReportRegistry {
     uint96              public immutable protocolBond; // bond amount, in bondCurrency's smallest unit
     uint64              public immutable liveness;     // OOv3 challenge window, seconds
     string              public swarmGatewayPrefix;     // e.g. "https://gateway.ethswarm.org/access/"
+
+    // Phare ENS layer. Settable exactly once by `admin` after Lighthouse is
+    // deployed (chicken-and-egg: Lighthouse takes registry address as an
+    // immutable). Until set, the truthful-settle and attest paths skip the
+    // ENS calls — the registry remains fully functional without a Lighthouse.
+    address      public immutable admin;
+    ILighthouse  public           lighthouse;
+
+    // Per-IMO state that backs the `vessel.sightings.*` text records.
+    mapping(uint256 imo => uint32) public sightingsByImo;
+    mapping(uint256 imo => uint32) public disputedByImo;
+    mapping(uint256 imo => bool)   public vesselNamed;
 
     // ────────────────────────────────────────────────────────────────────────
     // Status codes
@@ -143,6 +156,27 @@ contract ReportRegistry {
         protocolBond       = _protocolBond;
         liveness           = _liveness;
         swarmGatewayPrefix = _swarmGatewayPrefix;
+        admin              = msg.sender;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Lighthouse wiring
+    // ────────────────────────────────────────────────────────────────────────
+
+    error NotAdmin();
+    error LighthouseAlreadySet();
+    error LighthouseZero();
+
+    event LighthouseSet(address indexed lighthouse);
+
+    /// @notice One-shot setter. Called by the deployer after Lighthouse has
+    ///         been deployed against this registry's address.
+    function setLighthouse(ILighthouse _lighthouse) external {
+        if (msg.sender != admin)                 revert NotAdmin();
+        if (address(lighthouse) != address(0))   revert LighthouseAlreadySet();
+        if (address(_lighthouse) == address(0))  revert LighthouseZero();
+        lighthouse = _lighthouse;
+        emit LighthouseSet(address(_lighthouse));
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -237,12 +271,14 @@ contract ReportRegistry {
             r.status == STATUS_PENDING || r.status == STATUS_DISPUTED,
             "already settled"
         );
+        bool wasDisputed = (r.status == STATUS_DISPUTED);
         r.settledAt = uint64(block.timestamp);
 
         if (assertedTruthfully) {
             r.status = STATUS_SETTLED_TRUE;
             uint256 refund = uint256(r.bond) + uint256(r.umaBond);
             require(bondCurrency.transfer(r.reporter, refund), "refund failed");
+            _onTruthfulSettlement(r.imo, r.metadataSwarm, wasDisputed);
         } else {
             r.status = STATUS_SETTLED_FALSE;
             address disputer = oo.getAssertion(assertionId).disputer;
@@ -311,6 +347,37 @@ contract ReportRegistry {
         r.orbitalImageHash = imageHash;
 
         emit OrbitallyCorroborated(reportId, r.imo, imageHash, imageSwarm, teePrediction);
+
+        if (address(lighthouse) != address(0)) {
+            lighthouse.recordOrbital(r.imo, imageSwarm, imageHash, teePrediction);
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Lighthouse hook (truthful settlement path)
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// @dev Called from `assertionResolvedCallback` only when the assertion
+    ///      resolved truthfully. First sighting per IMO mints the vessel
+    ///      subname; subsequent ones update its sighting counters. No-op if
+    ///      Lighthouse is not yet wired.
+    function _onTruthfulSettlement(uint256 imo, string memory swarmRef, bool wasDisputed) internal {
+        if (address(lighthouse) == address(0)) return;
+
+        sightingsByImo[imo] += 1;
+        if (wasDisputed) disputedByImo[imo] += 1;
+
+        if (!vesselNamed[imo]) {
+            vesselNamed[imo] = true;
+            lighthouse.nameVessel(imo, swarmRef);
+        } else {
+            lighthouse.recordSighting(
+                imo,
+                swarmRef,
+                sightingsByImo[imo],
+                disputedByImo[imo]
+            );
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────
