@@ -15,10 +15,13 @@
     "tool:dispute":           "node tools/dispute.mjs",
     "tool:set-last-decision": "node tools/set-last-decision.mjs",
     "tool:fetch-metadata":    "node tools/fetch-metadata.mjs",
-    "tool:pin-reasoning":     "node tools/pin-reasoning.mjs"
+    "tool:pin-reasoning":     "node tools/pin-reasoning.mjs",
+    "tool:publish-stats":     "node tools/publish-stats.mjs"
   },
   "dependencies": {
     "skill": "workspace:*",
+    "swarm": "workspace:*",
+    "swarm-kv": "workspace:*",
     "@ethersphere/bee-js": "^12.1.0",
     "viem": "^2.21.0",
     "dotenv": "^16.4.5"

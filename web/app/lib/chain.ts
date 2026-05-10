@@ -263,7 +263,7 @@ export function ensUrl(name: string): string {
 export function bzzUrl(ref: string): string {
     if (!ref) return '';
     const clean = ref.replace(/^bzz:\/\//, '');
-    return `https://bzz.limo/bzz/${clean}/`;
+    return `https://bzz.limo/bytes/${clean}`;
 }
 
 // Used by NAME_WRAPPER reads if we ever want owner / fuses.
