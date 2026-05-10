@@ -6,6 +6,10 @@
 
 The result is a credibly neutral, citizen-funded sighting log that journalists, NGOs, insurers, and enforcement bodies can consume without trusting any single party.
 
+> ### Orbitport plugin fork
+> The `orbitalimager` Orbitport External Plugin shipped as part of this build lives at **<https://github.com/Red3lue/orbitport>** (branch `pedro/ethprague`).
+> The same tree is vendored under [`orbitport/`](orbitport/) in this monorepo for one-command local bring-up.
+
 ---
 
 ## Table of contents
@@ -284,7 +288,7 @@ This section documents exactly **what** each sponsor's product was used for, **w
 
 | Surface | Real or mocked | Where |
 |---|---|---|
-| **`orbitalimager` Orbitport Application Plugin** | **Shipped** — no photo plugin existed in the Orbitport ecosystem before; this fork adds one | [`orbitport/plugins/pkg/plugin/orbitalimager/`](orbitport/plugins/pkg/plugin/orbitalimager/) |
+| **`orbitalimager` Orbitport Application Plugin** | **Shipped** — no photo plugin existed in the Orbitport ecosystem before; this fork adds one. Fork: **<https://github.com/Red3lue/orbitport>** (`pedro/ethprague`) | [`orbitport/plugins/pkg/plugin/orbitalimager/`](orbitport/plugins/pkg/plugin/orbitalimager/) |
 | **KMS Ethereum-key on-chain attestation** | Real — EIP-191 signature, verifiable on-chain via `ECDSA.recover`, KMS address baked into `ReportRegistry` as immutable `orbitalAttestor` | [`contracts/src/ReportRegistry.sol`](contracts/src/ReportRegistry.sol) function `attest()`; sign path in [`orbital-orchestrator/src/onchain.mjs`](orbital-orchestrator/src/onchain.mjs) |
 | **cTRNG nonce in citizen submission path** | Real — pulled from the live Orbitport gateway and embedded in the metadata JSON before `submit()` | `web/` reporter PWA |
 | **spaceTEE inference** | Mocked (spaceTEE is on the SpaceComputer roadmap but not shipped) — rule-based stub returning `mocked: true` so consumers can filter | [`orbital-orchestrator/src/inference.mjs`](orbital-orchestrator/src/inference.mjs) |
