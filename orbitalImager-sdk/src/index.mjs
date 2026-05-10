@@ -1,8 +1,20 @@
 // orbitalImager-sdk — JS client for the orbitalimager Orbitport plugin.
 //
-// Calls the Orbitport gateway's JSON-RPC `plugin.Call` method, decodes the
-// base64-encoded image, and exposes the bytes + metadata to the caller.
-// No deps beyond Node 20 stdlib.
+// v0.0.1 (this file): single-shot RequestImagery — fetches the entire
+//   fixture image as one base64 blob. Kept for backward compatibility.
+//
+// v0.1.0 (./imager.mjs): tiled, resumable downloads with on-disk state.
+//   Re-exported below so callers can import everything from the package
+//   root: `import { downloadImage, getMetadata } from 'orbitalImager-sdk'`.
+
+export {
+  listImages,
+  getMetadata,
+  getPacket,
+  downloadPackets,
+  downloadImage,
+} from './imager.mjs';
+export { pluginCall, GatewayError } from './gateway.mjs';
 
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
