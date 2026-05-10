@@ -1,5 +1,6 @@
 // Single-shot orchestration:
-//   1. orbitalImager-sdk → fetch fixture image, save under images/<imo>/
+//   1. orbitalImager-sdk → resumably fetch every packet of a fragmented
+//      image (v0.1.0 SDK), recompose into images/<imo>/<ts>.png
 //   2. inference         → mocked port-based destination
 //   3. swarm.mjs         → empty (TODO); fall back to bzz://<keccak256>
 //   4. ens.mjs           → snapshot vessel + verifier records, rebuild
@@ -7,8 +8,12 @@
 //   5. onchain.mjs       → if .env present: enroll once, then write
 //                          verifier.lastDecision live on Sepolia
 
-import { resolve } from 'node:path';
-import { fetchImageryToFile } from 'orbitalImager-sdk';
+import { Buffer }   from 'node:buffer';
+import { readFile } from 'node:fs/promises';
+import { resolve }  from 'node:path';
+import {
+  downloadImage, listImages,
+} from 'orbitalImager-sdk';
 
 import { paths } from './paths.mjs';
 import { inferDestination } from './inference.mjs';
@@ -25,25 +30,71 @@ import {
 
 const FALLBACK_HANDLE = 'agent-orchestrator';
 
-export async function runPipeline({ imo, lat, lon, verifierHandle } = {}) {
+// Image to fetch when nothing more specific is supplied. The plugin only
+// fragments the configured fixture today, so picking the first available
+// id is good enough — once the plugin learns to route by (lat, lon) we
+// pass those through here instead.
+const IMAGE_ID_OVERRIDE = process.env.ORBITAL_IMAGER_IMAGE_ID;
+
+async function pickImageId({ gateway, bearer }) {
+  if (IMAGE_ID_OVERRIDE) return IMAGE_ID_OVERRIDE;
+  const { imageIds } = await listImages({ gateway, bearer });
+  if (imageIds.length === 0) {
+    throw new Error(
+      'orbitalimager has no fragmented images on disk — point ' +
+      'ORBITPORT_ORBITALIMAGER_FIXTURE_PATH at a PNG/JPEG and restart ' +
+      'the plugin');
+  }
+  return imageIds[0];
+}
+
+export async function runPipeline({ imo, lat, lon, verifierHandle, imageId } = {}) {
   if (!imo) throw new Error('imo required');
 
   const ts = Date.now();
-  const outPath = resolve(paths.imagesDir, String(imo), `${ts}.webp`);
+  const gateway = process.env.ORBITPORT_GATEWAY_URL;
+  const bearer  = process.env.ORBITPORT_BEARER;
+  const sdkOpts = { gateway, bearer };
 
-  console.log(`[pipeline] imo=${imo} fetching imagery…`);
-  const imagery = await fetchImageryToFile({
+  const chosenImageId = imageId ?? await pickImageId(sdkOpts);
+  const outPath       = resolve(paths.imagesDir, String(imo), `${ts}.png`);
+  const sessionDir    = resolve(paths.packageDir, 'state', 'sessions');
+
+  console.log(`[pipeline] imo=${imo} image_id=${chosenImageId} fetching packets…`);
+  const { state } = await downloadImage({
+    imageId:    chosenImageId,
     outPath,
-    request: { imo: Number(imo), lat: lat ?? 0, lon: lon ?? 0 },
+    sessionDir,
+    onProgress: (e) => {
+      if (e.phase === 'start' && e.current > 0 && e.current < e.total) {
+        console.log(`[pipeline]   resume: ${e.current}/${e.total} already on disk`);
+      } else if (e.phase === 'packet') {
+        console.log(`[pipeline]   packet ${e.packetIndex}  ${e.current}/${e.total}`);
+      } else if (e.phase === 'recompose') {
+        console.log(`[pipeline]   recomposing…`);
+      }
+    },
+    ...sdkOpts,
   });
+
+  // Recomposed PNG is on disk; load it back so swarm + ledger keep using
+  // the same { bytes, mimeType, hash } surface the rest of the pipeline
+  // already understands.
+  const imageBytes = await readFile(outPath);
+  const fullHashB64 = state.fullImageHash ?? '';
+  // Note: `imageHashHex` is the keccak256 of the ORIGINAL fixture bytes
+  // (computed server-side at fragment time). It will NOT match
+  // keccak256(imageBytes) because PNG re-encoding is not byte-stable.
+  // We keep using the server hash so it stays bound to the eventual
+  // attest() digest (orbital_attestor on-chain).
+  const imageHashHex = Buffer.from(fullHashB64, 'base64').toString('hex');
 
   console.log(`[pipeline] imo=${imo} running inference…`);
   const inference = inferDestination({ imo, lat, lon });
 
   console.log(`[pipeline] imo=${imo} uploading to swarm (mock)…`);
-  const swarm = await uploadToSwarm({ bytes: imagery.bytes, hint: `imo-${imo}` });
+  const swarm = await uploadToSwarm({ bytes: imageBytes, hint: `imo-${imo}` });
 
-  const imageHashHex = imagery.imageHash?.toString('hex') ?? '';
   const avatarRef = swarm.swarmRef ?? `bzz://${imageHashHex}`;
 
   // ── On-chain (best effort) ────────────────────────────────────────────
@@ -76,26 +127,26 @@ export async function runPipeline({ imo, lat, lon, verifierHandle } = {}) {
 
   // ── ENS ledger snapshot (.md mirror) ──────────────────────────────────
   console.log(`[pipeline] imo=${imo} updating ENS ledgers…`);
-  const state = await loadState();
+  const ledgerState = await loadState();
 
   const vessel = buildVesselRecord({
     imo, timestamp: ts,
-    imageLocalPath: imagery.outPath,
-    imageMime:      imagery.mimeType,
+    imageLocalPath: outPath,
+    imageMime:      'image/png',
     imageHashHex, avatarRef, inference,
   });
-  state.vessels[String(imo)] = vessel;
+  ledgerState.vessels[String(imo)] = vessel;
 
   const verifier = buildVerifierActivity({
     handle: effectiveHandle,
     imo, timestamp: ts,
     decision: inference,
   });
-  state.verifiers[effectiveHandle] = verifier;
+  ledgerState.verifiers[effectiveHandle] = verifier;
 
-  await saveState(state);
-  await renderVesselsLedger(state);
-  await renderVerifiersLedger(state);
+  await saveState(ledgerState);
+  await renderVesselsLedger(ledgerState);
+  await renderVerifiersLedger(ledgerState);
 
   // ── Verifier on-chain write (best effort) ─────────────────────────────
   if (onchain.enabled) {
@@ -120,10 +171,16 @@ export async function runPipeline({ imo, lat, lon, verifierHandle } = {}) {
     imo: String(imo),
     timestamp: ts,
     imagery: {
-      bytes: imagery.bytes.length,
-      mime:  imagery.mimeType,
-      hash:  `0x${imageHashHex}`,
-      file:  imagery.outPath,
+      bytes:      imageBytes.length,
+      mime:       'image/png',
+      hash:       `0x${imageHashHex}`,
+      file:       outPath,
+      imageId:    chosenImageId,
+      shipName:   state.shipName,
+      packets:    state.packetCount,
+      width:      state.imageWidth,
+      height:     state.imageHeight,
+      sessionDir: resolve(sessionDir, chosenImageId),
     },
     inference,
     swarm,
