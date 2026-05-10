@@ -144,24 +144,17 @@ export default function HomePage() {
         document.getElementById('globe')?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
-    // Merge on-chain vessels into the demo FLEET:
-    //   - IMOs that already exist in FLEET → flagged onChain:true (visual cue
-    //     on the Globe + DossierPanel).
-    //   - IMOs minted on-chain that are NOT in FLEET → synthesized with a
-    //     default position so they still appear on the planet.
+    // Render only on-chain vessels on the planet. For each minted IMO:
+    //   - if FLEET has matching rich demo data, use it (flagged onChain:true).
+    //   - else synthesize a minimal Vessel with a default position.
+    // FLEET entries with no on-chain mint are dropped (no fake pings).
     const onChainVessels = useVessels();
     const fleet = useMemo<readonly Vessel[]>(() => {
-        const onChainImos = new Set((onChainVessels.data ?? []).map((v) => v.imo));
-        const existingImos = new Set(FLEET.map((v) => v.imo));
-
-        const annotated = FLEET.map((v) =>
-            onChainImos.has(v.imo) ? { ...v, onChain: true } : v,
-        );
-        const synthesized = (onChainVessels.data ?? [])
-            .filter((v) => !existingImos.has(v.imo))
-            .map((v) => synthesizeOnChainVessel(v.imo));
-
-        return [...annotated, ...synthesized];
+        const fleetByImo = new Map(FLEET.map((v) => [v.imo, v]));
+        return (onChainVessels.data ?? []).map((v) => {
+            const match = fleetByImo.get(v.imo);
+            return match ? { ...match, onChain: true } : synthesizeOnChainVessel(v.imo);
+        });
     }, [onChainVessels.data]);
 
     const selectedVessel = selectedImo != null
