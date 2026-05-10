@@ -56,5 +56,5 @@ orbital-orchestrator/state/
 orbitport/
 
 
-*.png
+
 ./tmp
