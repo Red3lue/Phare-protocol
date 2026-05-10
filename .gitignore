@@ -48,5 +48,13 @@ orbitalImager-sdk/state/
 orbital-orchestrator/images/
 orbital-orchestrator/state/
 
+# orbitalimager fragmenter output (bind-mounted from plugin-orbitalimager
+# in dev.docker-compose.yaml so packets/metadata.json are inspectable on host)
+.orbitalimager-state/
+
 # Forked Orbitport repo — tracked separately as Red3lue/orbitport
 orbitport/
+
+
+*.png
+./tmp
