@@ -8,4 +8,5 @@ packages:
   - "orbital-orchestrator"
   - "orbital-plugin"
   - "swarm"
+  - "swarm-kv"
   - "contracts"

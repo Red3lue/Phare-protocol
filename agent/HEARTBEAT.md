@@ -29,8 +29,14 @@ If `phase == "running"`:
      - Run `node /Users/nick/Documents/Phare-protocol/agent/tools/set-last-decision.mjs <reportId> <ref from pin-reasoning>`.
      - Collect `(reportId, ens)` for the alert.
 
-3. If at least one dispute landed, reply with a one-line alert:
-   `disputed <N> report(s); ENS: <handle>.verifier.phare.eth`.
+3. After processing every candidate (whether or not a dispute landed),
+   run `node /Users/nick/Documents/Phare-protocol/agent/tools/publish-stats.mjs`.
+   This pushes the live counters and identity refs into the verifier's
+   own Swarm-KV namespace (`phare:verifier:<handle>`). It is owner-signed
+   and gateway-verifiable — no NameStone round-trip per tick.
+
+4. If at least one dispute landed, reply with a one-line alert:
+   `disputed <N> report(s); ENS: <handle>.verifier.phare.eth · KV: phare:verifier:<handle>`.
    Otherwise reply `HEARTBEAT_OK`.
 
 ## Hard rules

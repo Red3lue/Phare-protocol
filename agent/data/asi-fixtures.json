@@ -46,11 +46,6 @@
       "confidence": 0.83,
       "reasoning": "NIGHT IBIS — Equatorial Guinea flag, Bab el-Mandeb / Red Sea drift; OFAC SDN."
     },
-    "9999999": {
-      "verdict": "fake",
-      "confidence": 0.97,
-      "reasoning": "IMO 9999999 is unallocated — outside the assigned range. Adversarial-demo fixture."
-    },
     "0000000": {
       "verdict": "fake",
       "confidence": 0.99,

@@ -1,8 +1,8 @@
 {
-  "name": "swarm",
+  "name": "swarm-kv",
   "version": "0.1.0",
   "private": true,
-  "description": "Verified Fetch primitives for Swarm gateways — used by web (PWA) and agent (verifier skill).",
+  "description": "Developer-friendly key-value store on Swarm Feeds. put/get/list/del with strings, JSON, and binary values, tied to an Ethereum keypair.",
   "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -21,7 +21,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ethersphere/bee-js": "^12.1.0"
+    "@ethersphere/bee-js": "^12.1.0",
+    "swarm": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.0"

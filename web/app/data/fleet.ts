@@ -125,7 +125,11 @@ export function ensUrl(v: Vessel): string {
     return `https://sepolia.app.ens.domains/${ensName(v)}`;
 }
 
+// /bytes returns the raw chunk byte stream that hashes back to <ref>
+// (matches the agent's verifyAndFetch path). /bzz auto-resolves
+// manifests, which our single-chunk-CAC uploads (uploadData) don't have
+// — that path 404s. See swarm/README.md "Scope".
 export function swarmUrl(ref: string): string {
     const clean = ref.replace(/^bzz:\/\//, '');
-    return `https://bzz.limo/bzz/${clean}/`;
+    return `https://bzz.limo/bytes/${clean}`;
 }

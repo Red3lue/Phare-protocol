@@ -382,6 +382,13 @@ export function useReportSubmit() {
             setError('drop a photo first');
             return;
         }
+        // ReportRegistry.submit() reverts on imo=0 with `require(imo != 0, "imo=0")`.
+        // Guard early — empty / zero / non-numeric inputs all collapse to 0n.
+        const imoNum = Number(imo);
+        if (!Number.isInteger(imoNum) || imoNum <= 0) {
+            setError('imo must be a positive integer');
+            return;
+        }
         if (!window.ethereum) {
             setError('no injected wallet (install MetaMask)');
             return;
@@ -398,12 +405,11 @@ export function useReportSubmit() {
             setStep(1, { status: 'active', log: 'uploading photo…' });
             const bee = new Bee(SWARM_BEE_URL);
             const photoBytes = new Uint8Array(await photoFile.arrayBuffer());
-            const photoUpload = await bee.uploadFile(
-                NULL_STAMP,
-                photoBytes,
-                photoFile.name,
-                { contentType: photoFile.type || 'application/octet-stream' },
-            );
+            // Single-chunk-CAC upload (raw bytes, no Mantaray wrapper) so
+            // the agent's verifyAndFetch can BMT-verify the photo against
+            // /bytes/<photoRef>. Filename + content-type intentionally
+            // dropped — see swarm/README.md "Scope".
+            const photoUpload = await bee.uploadData(NULL_STAMP, photoBytes);
             const photoBzz = `bzz://${photoUpload.reference.toString()}`;
 
             const nonce = new Uint8Array(32);

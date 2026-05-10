@@ -81,6 +81,7 @@ The shorthand `node tools/<name>.mjs` only works when CWD is
 | `status.mjs` | any | Read-only state dump. |
 | `fetch-metadata.mjs <bzz://ref>` | running | **Verified Fetch** — pulls bytes from `${SWARM_BEE_URL}/bytes/<hash>`, recomputes the BMT root via `MerkleTree.root`, throws on mismatch. Returns parsed JSON only on `verified:true`. |
 | `pin-reasoning.mjs <reportId>` | running | Pins `state/decisions/<reportId>.json` via `bee.uploadData` with NULL_STAMP, prints `bzz://<root>`, stamps the bzz back into the local file for idempotency. |
+| `publish-stats.mjs` | running | Publishes `stats / handle / policy / soul / lastDecision` into the verifier's own Swarm-KV namespace (`phare:verifier:<handle>`). Owner-signed, gateway-verifiable. Idempotent; runs at the end of every tick. |
 
 The set is intentionally small. Each tool wraps an existing helper from
 `/skill` (the JS lib your teammate wrote) — no business logic is
